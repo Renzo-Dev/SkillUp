@@ -1,6 +1,6 @@
 # SkillUp Project Makefile
 
-.PHONY: help init start stop build chown composer-install create-laravel-projects key-generate migrate
+.PHONY: help init start stop build chown composer-install create-laravel-projects key-generate migrate clear-cache
 
 # Default target
 help:
@@ -11,6 +11,7 @@ help:
 	@echo "  build         - Build Docker images"
 	@echo "  key-generate  - Generate Laravel application key"
 	@echo "  migrate       - Run Laravel database migrations"
+	@echo "  clear-cache   - Clear Laravel cache (views, config, routes)"
 
 # Initialize project
 init: build chown create-laravel-projects composer-install key-generate migrate
@@ -68,11 +69,13 @@ chown:
 	@for service in auth-service; do \
 		if [ -d "./services/$$service/src" ]; then \
 			echo "Setting permissions for $$service..."; \
-			sudo chown -R $(shell whoami):$(shell whoami) ./services/$$service/src; \
-			sudo chmod -R 755 ./services/$$service/src; \
+			chown -R $(shell whoami):$(shell whoami) ./services/$$service/src 2>/dev/null || true; \
+			chmod -R 755 ./services/$$service/src 2>/dev/null || true; \
 			echo "Setting Laravel storage permissions for $$service..."; \
-			sudo chmod -R 775 ./services/$$service/src/storage; \
-			sudo chmod -R 775 ./services/$$service/src/bootstrap/cache; \
+			chmod -R 775 ./services/$$service/src/storage 2>/dev/null || true; \
+			chmod -R 775 ./services/$$service/src/bootstrap/cache 2>/dev/null || true; \
+			echo "Setting Laravel views permissions for $$service..."; \
+			chmod -R 775 ./services/$$service/src/storage/framework/views 2>/dev/null || true; \
 		fi; \
 	done
 	@echo "File permissions fixed!";
@@ -103,3 +106,19 @@ migrate:
 		fi; \
 	done
 	@echo "Database migrations completed!"
+
+# Clear Laravel cache
+clear-cache:
+	@echo "Clearing Laravel cache..."
+	@for service in auth-service; do \
+		if docker-compose ps $$service | grep -q "Up"; then \
+			echo "Clearing cache for $$service..."; \
+			docker-compose exec $$service php artisan cache:clear; \
+			docker-compose exec $$service php artisan view:clear; \
+			docker-compose exec $$service php artisan config:clear; \
+			docker-compose exec $$service php artisan route:clear; \
+		else \
+			echo "$$service container is not running. Start containers first with: make start"; \
+		fi; \
+	done
+	@echo "Laravel cache cleared!"
