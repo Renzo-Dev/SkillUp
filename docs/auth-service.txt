@@ -20,7 +20,7 @@
 - Rate limiting
 
 ### Авторизация
-- Роли: student, teacher, admin
+- Роли: user, admin
 - Проверка прав доступа
 - Logout с блокировкой токенов
 
@@ -56,11 +56,10 @@ POST   /api/v1/admin/users/{id}/ban
 ### users
 ```sql
 id              BIGSERIAL PRIMARY KEY
+name            VARCHAR(255) NOT NULL
 email           VARCHAR(255) UNIQUE NOT NULL
 password_hash   VARCHAR(255) NOT NULL
-first_name      VARCHAR(100) NULL
-last_name       VARCHAR(100) NULL
-role            VARCHAR(20) DEFAULT 'student'
+role            VARCHAR(20) DEFAULT 'user'
 is_active       BOOLEAN DEFAULT true
 email_verified_at TIMESTAMP NULL
 last_login_at   TIMESTAMP NULL
@@ -92,9 +91,8 @@ created_at TIMESTAMP DEFAULT NOW()
 {
   "user_id": 123,
   "email": "user@example.com",
-  "role": "student",
-  "first_name": "John",
-  "last_name": "Doe"
+  "role": "user",
+  "name": "John Doe"
 }
 ```
 
@@ -107,7 +105,7 @@ created_at TIMESTAMP DEFAULT NOW()
 ```
 
 ## Безопасность
-- Пароли: минимум 8 символов, bcrypt хеширование
+- Пароли: минимум 6 символов, bcrypt хеширование
 - Rate limiting: 5 попыток входа/минуту
 - JWT токены с коротким временем жизни
 - CORS настройки
