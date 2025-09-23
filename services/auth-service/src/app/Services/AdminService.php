@@ -7,6 +7,9 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class AdminService
 {
+  /**
+   * Получение списка пользователей с фильтрацией и пагинацией
+   */
   public function getUsers(array $filters = []): LengthAwarePaginator
   {
     $query = User::query();
@@ -30,6 +33,9 @@ class AdminService
     return $query->paginate($filters['per_page'] ?? 15);
   }
 
+  /**
+   * Изменение роли пользователя с валидацией
+   */
   public function updateUserRole(int $userId, string $role): User
   {
     $user = User::findOrFail($userId);
@@ -43,6 +49,9 @@ class AdminService
     return $user;
   }
 
+  /**
+   * Блокировка пользователя с указанием причины
+   */
   public function banUser(int $userId, string $reason): User
   {
     $user = User::findOrFail($userId);

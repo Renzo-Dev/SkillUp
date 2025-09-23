@@ -23,6 +23,9 @@ class AuthController extends Controller
   ) {
   }
 
+  /**
+   * Регистрация нового пользователя
+   */
   public function register(RegisterRequest $request): JsonResponse
   {
     $user = $this->authService->register($request->validated());
@@ -35,6 +38,9 @@ class AuthController extends Controller
     ], 201);
   }
 
+  /**
+   * Аутентификация пользователя
+   */
   public function login(LoginRequest $request): JsonResponse
   {
     $user = $this->authService->login($request->validated());
@@ -47,6 +53,9 @@ class AuthController extends Controller
     ]);
   }
 
+  /**
+   * Обновление access токена через refresh токен
+   */
   public function refresh(RefreshTokenRequest $request): JsonResponse
   {
     $user = $this->authService->refreshToken($request->validated()['refresh_token']);
@@ -57,6 +66,9 @@ class AuthController extends Controller
     ]);
   }
 
+  /**
+   * Выход пользователя из системы
+   */
   public function logout(Request $request): JsonResponse
   {
     $this->authService->logout($request->user());
@@ -64,11 +76,17 @@ class AuthController extends Controller
     return response()->json(['message' => 'Logout successful']);
   }
 
+  /**
+   * Получение данных текущего пользователя
+   */
   public function me(Request $request): JsonResponse
   {
     return response()->json(['user' => $request->user()]);
   }
 
+  /**
+   * Запрос на сброс пароля
+   */
   public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
   {
     $this->authService->forgotPassword($request->validated()['email']);
@@ -76,6 +94,9 @@ class AuthController extends Controller
     return response()->json(['message' => 'Password reset link sent']);
   }
 
+  /**
+   * Сброс пароля по токену
+   */
   public function resetPassword(ResetPasswordRequest $request): JsonResponse
   {
     $this->authService->resetPassword($request->validated());
@@ -83,6 +104,9 @@ class AuthController extends Controller
     return response()->json(['message' => 'Password reset successful']);
   }
 
+  /**
+   * Подтверждение email адреса
+   */
   public function verifyEmail(string $token): JsonResponse
   {
     $this->authService->verifyEmail($token);
@@ -90,6 +114,9 @@ class AuthController extends Controller
     return response()->json(['message' => 'Email verified successfully']);
   }
 
+  /**
+   * Обновление профиля пользователя
+   */
   public function updateProfile(UpdateProfileRequest $request): JsonResponse
   {
     $user = $this->authService->updateProfile($request->user(), $request->validated());
@@ -100,6 +127,9 @@ class AuthController extends Controller
     ]);
   }
 
+  /**
+   * Изменение пароля пользователя
+   */
   public function updatePassword(UpdatePasswordRequest $request): JsonResponse
   {
     $this->authService->updatePassword($request->user(), $request->validated());

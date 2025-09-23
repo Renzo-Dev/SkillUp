@@ -16,6 +16,9 @@ class AdminController extends Controller
   ) {
   }
 
+  /**
+   * Получение списка пользователей с фильтрацией
+   */
   public function getUsers(Request $request): JsonResponse
   {
     $users = $this->adminService->getUsers($request->query());
@@ -23,6 +26,9 @@ class AdminController extends Controller
     return response()->json(['users' => $users]);
   }
 
+  /**
+   * Изменение роли пользователя
+   */
   public function updateUserRole(UpdateUserRoleRequest $request, int $userId): JsonResponse
   {
     $user = $this->adminService->updateUserRole($userId, $request->validated()['role']);
@@ -33,6 +39,9 @@ class AdminController extends Controller
     ]);
   }
 
+  /**
+   * Блокировка пользователя
+   */
   public function banUser(BanUserRequest $request, int $userId): JsonResponse
   {
     $user = $this->adminService->banUser($userId, $request->validated()['reason']);

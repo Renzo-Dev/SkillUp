@@ -20,15 +20,20 @@ class AuthService
   ) {
   }
 
+  /**
+   * Создание нового пользователя и отправка события регистрации
+   */
   public function register(array $data): User
   {
-    ;
+    $verificationToken = Str::random(64);
+
     $user = User::create([
       'name' => $data['name'],
       'email' => $data['email'],
       'password' => $data['password'],
       'role' => 'user',
       'is_active' => true,
+      'email_verification_token' => $verificationToken,
     ]);
 
     $this->rabbitMQService->publish('user.registered', [
@@ -36,11 +41,15 @@ class AuthService
       'email' => $user->email,
       'role' => $user->role,
       'name' => $user->name,
+      'verification_token' => $verificationToken,
     ]);
 
     return $user;
   }
 
+  /**
+   * Аутентификация пользователя с проверкой пароля и статуса
+   */
   public function login(array $data): User
   {
     $user = User::where('email', $data['email'])->firstOrFail();
@@ -63,6 +72,9 @@ class AuthService
     return $user;
   }
 
+  /**
+   * Обновление токена доступа через refresh токен
+   */
   public function refreshToken(string $refreshToken): User
   {
     $user = $this->jwtService->validateRefreshToken($refreshToken);
@@ -81,11 +93,17 @@ class AuthService
     return $user;
   }
 
+  /**
+   * Выход пользователя - отзыв всех токенов
+   */
   public function logout(User $user): void
   {
     $this->jwtService->revokeAllUserTokens($user);
   }
 
+  /**
+   * Создание токена для сброса пароля
+   */
   public function forgotPassword(string $email): void
   {
     $user = User::where('email', $email)->first();
@@ -108,6 +126,9 @@ class AuthService
     // TODO: Send email with reset link
   }
 
+  /**
+   * Сброс пароля по токену
+   */
   public function resetPassword(array $data): void
   {
     $passwordReset = PasswordReset::where('token', $data['token'])
@@ -120,18 +141,42 @@ class AuthService
     $passwordReset->delete();
   }
 
+  /**
+   * Подтверждение email адреса по токену
+   */
   public function verifyEmail(string $token): void
   {
     $user = User::where('email_verification_token', $token)->firstOrFail();
-    $user->update(['email_verified_at' => now()]);
+    
+    // Обновляем статус подтверждения и удаляем токен
+    $user->update([
+      'email_verified_at' => now(),
+      'email_verification_token' => null,
+      'is_active' => true
+    ]);
+
+    // Отправляем событие подтверждения email для сервиса подписки
+    $this->rabbitMQService->publish('user.email_verified', [
+      'user_id' => $user->id,
+      'email' => $user->email,
+      'name' => $user->name,
+      'role' => $user->role,
+      'verified_at' => $user->email_verified_at->toISOString(),
+    ]);
   }
 
+  /**
+   * Обновление профиля пользователя
+   */
   public function updateProfile(User $user, array $data): User
   {
     $user->update($data);
     return $user->fresh();
   }
 
+  /**
+   * Изменение пароля с проверкой текущего
+   */
   public function updatePassword(User $user, array $data): void
   {
     if (!Hash::check($data['current_password'], $user->password)) {

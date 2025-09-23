@@ -24,9 +24,15 @@ class RabbitMQService
     $this->channel = $this->connection->channel();
   }
 
+  /**
+   * Публикация события в RabbitMQ с логированием
+   */
   public function publish(string $event, array $data): void
   {
     try {
+      // Создаем exchange если не существует
+      $this->channel->exchange_declare('auth.events', 'topic', false, true, false);
+      
       $message = new AMQPMessage(
         json_encode($data),
         ['delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT]
@@ -44,6 +50,9 @@ class RabbitMQService
     }
   }
 
+  /**
+   * Подписка на очередь и обработка сообщений
+   */
   public function consume(string $queue, callable $callback): void
   {
     $this->channel->queue_declare($queue, false, true, false, false);
@@ -54,6 +63,9 @@ class RabbitMQService
     }
   }
 
+  /**
+   * Закрытие соединения с RabbitMQ
+   */
   public function __destruct()
   {
     if (isset($this->channel)) {

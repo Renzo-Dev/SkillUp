@@ -11,12 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('refresh_tokens', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('token_hash')->unique();
-            $table->timestamp('expires_at');
-            $table->timestamps();
+        Schema::table('users', function (Blueprint $table) {
+            $table->string('email_verification_token')->nullable()->after('email_verified_at');
         });
     }
 
@@ -25,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('refresh_tokens');
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropColumn('email_verification_token');
+        });
     }
 };
