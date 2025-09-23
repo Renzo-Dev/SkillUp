@@ -5,7 +5,7 @@ use App\Http\Controllers\AdminController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
-Route::prefix('v1/auth')->group(function () {
+Route::prefix('auth')->group(function () {
   Route::post('/register', [AuthController::class, 'register']);
   Route::post('/login', [AuthController::class, 'login']);
   Route::post('/refresh', [AuthController::class, 'refresh']);
@@ -15,7 +15,7 @@ Route::prefix('v1/auth')->group(function () {
 });
 
 // Protected routes
-Route::prefix('v1/auth')->middleware('jwt.auth')->group(function () {
+Route::prefix('auth')->middleware('jwt.auth')->group(function () {
   Route::get('/me', [AuthController::class, 'me']);
   Route::post('/logout', [AuthController::class, 'logout']);
   Route::put('/profile', [AuthController::class, 'updateProfile']);
@@ -23,7 +23,7 @@ Route::prefix('v1/auth')->middleware('jwt.auth')->group(function () {
 });
 
 // Admin routes
-Route::prefix('v1/admin')->middleware(['jwt.auth', 'role:admin'])->group(function () {
+Route::prefix('admin')->middleware(['jwt.auth', 'role:admin'])->group(function () {
   Route::get('/users', [AdminController::class, 'getUsers']);
   Route::put('/users/{id}/role', [AdminController::class, 'updateUserRole']);
   Route::post('/users/{id}/ban', [AdminController::class, 'banUser']);
