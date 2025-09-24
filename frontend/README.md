@@ -1,15 +1,23 @@
 # Frontend
 
-Frontend приложения SkillUp.
+Nuxt.js frontend application
 
-## Описание
+## Development
 
-Этот каталог содержит frontend часть приложения SkillUp, построенную на Vue 3.
+```bash
+# Install dependencies
+npm install
 
-## Структура
+# Start development server
+npm run dev
+```
 
-Структура проекта будет добавлена по мере разработки.
+## Build
 
-## Установка и запуск
+```bash
+# Build for production
+npm run build
 
-Инструкции по установке и запуску будут добавлены позже.
+# Preview production build
+npm run preview
+```

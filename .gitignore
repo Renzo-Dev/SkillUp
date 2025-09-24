@@ -1,6 +1,7 @@
 # Laravel
 /vendor/
 /node_modules/
+/.nuxt/
 /public/hot
 /public/storage
 /storage/*.key
@@ -22,6 +23,8 @@ yarn-error.log
 
 # Vue.js / Frontend
 core/resources/frontend/node_modules/
+frontend/node_modules/
+frontend/.nuxt/
 core/resources/frontend/dist/
 core/resources/frontend/build/
 core/resources/frontend/.nuxt/
