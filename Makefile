@@ -1,6 +1,6 @@
 # SkillUp Project Makefile
 
-.PHONY: help init start stop build chown composer-install create-laravel-projects key-generate migrate clear-cache logs restart fix-permissions status test-connection fix-env clean rebuild ensure-containers-running jwt-secret
+.PHONY: help init start stop build chown composer-install create-laravel-projects key-generate migrate clear-cache logs restart fix-permissions status test-connection fix-env clean rebuild ensure-containers-running jwt-secret frontend-install frontend-build frontend-dev frontend-logs
 
 # Default target
 help:
@@ -21,6 +21,12 @@ help:
 	@echo "  test-connection - Test all service connections"
 	@echo "  clean          - Clean up containers and volumes"
 	@echo "  rebuild         - Complete rebuild (clean + init)"
+	@echo ""
+	@echo "Frontend commands:"
+	@echo "  frontend-install - Install frontend dependencies"
+	@echo "  frontend-build   - Build frontend for production"
+	@echo "  frontend-dev     - Start frontend in development mode"
+	@echo "  frontend-logs    - Show frontend container logs"
 
 # Initialize project
 init: build chown create-laravel-projects composer-install ensure-containers-running key-generate jwt-secret migrate
@@ -186,6 +192,8 @@ test-connection:
 	@echo "Testing service connections..."
 	@echo "Testing nginx (port 80)..."
 	@curl -I http://localhost 2>/dev/null | head -1 || echo "❌ Nginx not accessible"
+	@echo "Testing frontend (port 3000)..."
+	@curl -I http://localhost:3000 2>/dev/null | head -1 || echo "❌ Frontend not accessible"
 	@echo "Testing auth-service (port 9000)..."
 	@curl -I http://localhost:9000 2>/dev/null | head -1 || echo "❌ Auth-service not accessible"
 	@echo "Testing RabbitMQ management (port 15672)..."
@@ -219,3 +227,22 @@ clean:
 # Complete rebuild
 rebuild: clean init
 	@echo "Complete rebuild finished!"
+
+# Frontend commands
+frontend-install:
+	@echo "Installing frontend dependencies..."
+	cd frontend && npm install
+	@echo "Frontend dependencies installed!"
+
+frontend-build:
+	@echo "Building frontend for production..."
+	cd frontend && npm run build
+	@echo "Frontend built successfully!"
+
+frontend-dev:
+	@echo "Starting frontend in development mode..."
+	cd frontend && npm run dev
+
+frontend-logs:
+	@echo "Showing frontend container logs:"
+	docker-compose logs -f frontend
