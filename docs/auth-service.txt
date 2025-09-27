@@ -4,7 +4,7 @@
 Микросервис для управления пользователями и авторизацией в SkillUp.
 
 ## Технологии
-- Laravel 11+ (PHP 8.3+)
+- Laravel 12 (PHP 8.2+)
 - PostgreSQL 15+
 - Redis 7+
 - RabbitMQ 3.12+
@@ -13,90 +13,95 @@
 ## Функционал
 
 ### Аутентификация
-- Регистрация по email/password
-- JWT токены (access: 15min, refresh: 7 дней)
-- Сброс пароля через email
-- Подтверждение email
-- Rate limiting
+- Регистрация по email/password с автогенерацией access/refresh токенов
+- JWT токены (access: 15 мин, refresh: 7 дней)
+- Сброс пароля по email с одноразовым токеном (TTL 1 час)
+- Подтверждение email через `email_verification_token`
+- Rate limiting через middleware `rate.limit`
 
 ### Авторизация
-- Роли: user, admin
-- Проверка прав доступа
-- Logout с блокировкой токенов
+- Роли: `user`, `admin`
+- Middleware `jwt.auth` + `role`
+- Logout отзывает все refresh токены пользователя
+- Обновление профиля и смена пароля
 
 ## API
 
 ### Публичные
 ```
-POST /api/v1/auth/register
-POST /api/v1/auth/login
-POST /api/v1/auth/refresh
-POST /api/v1/auth/forgot-password
-POST /api/v1/auth/reset-password
-POST /api/v1/auth/verify-email/{token}
+POST /api/auth/register
+POST /api/auth/login
+POST /api/auth/refresh
+POST /api/auth/forgot-password
+POST /api/auth/reset-password
+POST /api/auth/verify-email/{token}
 ```
 
 ### Защищенные
 ```
-GET    /api/v1/auth/me
-POST   /api/v1/auth/logout
-PUT    /api/v1/auth/profile
-PUT    /api/v1/auth/password
+GET    /api/auth/me
+POST   /api/auth/logout
+PUT    /api/auth/profile
+PUT    /api/auth/password
 ```
 
 ### Админ
 ```
-GET    /api/v1/admin/users
-PUT    /api/v1/admin/users/{id}/role
-POST   /api/v1/admin/users/{id}/ban
+GET    /api/admin/users
+PUT    /api/admin/users/{id}/role
+POST   /api/admin/users/{id}/ban
 ```
 
 ## База данных
 
 ### users
 ```sql
-id              BIGSERIAL PRIMARY KEY
-name            VARCHAR(255) NOT NULL
-email           VARCHAR(255) UNIQUE NOT NULL
-password_hash   VARCHAR(255) NOT NULL
-role            VARCHAR(20) DEFAULT 'user'
-is_active       BOOLEAN DEFAULT true
-email_verified_at TIMESTAMP NULL
-last_login_at   TIMESTAMP NULL
-created_at      TIMESTAMP DEFAULT NOW()
-updated_at      TIMESTAMP DEFAULT NOW()
+id                      BIGSERIAL PRIMARY KEY
+name                    VARCHAR(255) NOT NULL
+email                   VARCHAR(255) UNIQUE NOT NULL
+password                VARCHAR(255) NOT NULL -- кастомный cast hashed
+role                    VARCHAR(20) DEFAULT 'user'
+is_active               BOOLEAN DEFAULT true
+email_verified_at       TIMESTAMP NULL
+email_verification_token VARCHAR(255) NULL
+last_login_at           TIMESTAMP NULL
+remember_token          VARCHAR(100) NULL
+created_at              TIMESTAMP NULL
+updated_at              TIMESTAMP NULL
 ```
 
 ### refresh_tokens
 ```sql
-id         BIGSERIAL PRIMARY KEY
-user_id    BIGINT REFERENCES users(id) ON DELETE CASCADE
-token_hash VARCHAR(255) UNIQUE NOT NULL
-expires_at TIMESTAMP NOT NULL
-created_at TIMESTAMP DEFAULT NOW()
+id          BIGSERIAL PRIMARY KEY
+user_id     BIGINT REFERENCES users(id) ON DELETE CASCADE
+token_hash  VARCHAR(255) UNIQUE NOT NULL
+expires_at  TIMESTAMP NOT NULL
+created_at  TIMESTAMP NULL
+updated_at  TIMESTAMP NULL
 ```
 
 ### password_resets
 ```sql
-email      VARCHAR(255) NOT NULL
-token      VARCHAR(255) UNIQUE NOT NULL
-expires_at TIMESTAMP NOT NULL
-created_at TIMESTAMP DEFAULT NOW()
+email       VARCHAR(255) NOT NULL
+token       VARCHAR(255) NOT NULL
+expires_at  TIMESTAMP NOT NULL
+created_at  TIMESTAMP NULL
 ```
 
 ## События RabbitMQ
 
-### UserRegistered
+### user.registered
 ```json
 {
   "user_id": 123,
   "email": "user@example.com",
   "role": "user",
-  "name": "John Doe"
+  "name": "John Doe",
+  "verification_token": "..."
 }
 ```
 
-### UserLoggedIn
+### user.logged_in
 ```json
 {
   "user_id": 123,
@@ -104,8 +109,20 @@ created_at TIMESTAMP DEFAULT NOW()
 }
 ```
 
+### auth.email_verified
+```json
+{
+  "user_id": 123,
+  "email": "user@example.com",
+  "name": "John Doe",
+  "role": "user",
+  "verified_at": "2025-09-27T12:34:56Z"
+}
+```
+
 ## Безопасность
-- Пароли: минимум 6 символов, bcrypt хеширование
-- Rate limiting: 5 попыток входа/минуту
-- JWT токены с коротким временем жизни
-- CORS настройки
+- Пароли: минимум 6 символов, hash через встроенный каст
+- Rate limiting: middleware `rate.limit` (по IP + route name)
+- JWT: access 15 минут, refresh 7 дней, хранение refresh в БД (sha256)
+- JWT middleware блокирует `is_active=false`
+- CORS настраивается через Laravel config
