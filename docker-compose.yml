@@ -41,7 +41,7 @@ services:
     working_dir: /var/www/
     volumes:
       - ./frontend/src:/var/www/
-      - node_modules:/var/www/node_modules  # Исключаем node_modules из volume
+      - node_modules:/var/www/node_modules
     ports:
       - '3000:3000'
     networks:

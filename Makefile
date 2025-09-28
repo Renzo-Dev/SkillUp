@@ -45,15 +45,7 @@ init:
 	@for service in $(LARAVEL_SERVICES); do \
 		$(COMPOSE) exec $$service bash -lc "cd /var/www/html && php artisan key:generate --force && php artisan jwt:secret --force && php artisan migrate --force"; \
 	done
-	@echo ">>> Installing frontend dependencies"
-	@if [ -f "./frontend/src/package.json" ]; then \
-		echo "Installing npm dependencies in frontend container"; \
-		$(COMPOSE) exec frontend npm install; \
-		echo "Starting Nuxt dev server"; \
-		$(COMPOSE) exec -d frontend npm run dev; \
-	else \
-		echo "No package.json found in frontend/src"; \
-	fi
+	@echo ">>> Frontend container will auto-run npm install && npm run dev"
 	@echo ">>> Fixing file ownership"
 	@chown -R $(HOST_UID):$(HOST_GID) ./frontend ./services 2>/dev/null || true
 	@echo ">>> Init completed"

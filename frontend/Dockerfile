@@ -19,5 +19,5 @@ ENV NODE_ENV=development
 ENV NUXT_HOST=0.0.0.0
 ENV NUXT_PORT=3000
 
-# Контейнер по умолчанию открывает шелл для разработки
-CMD ["sh", "-c", "while true; do sleep 30; done"]
+# Автоматически ставим зависимости и запускаем дев-сервер
+CMD ["sh", "-c", "npm install && npm run dev"]

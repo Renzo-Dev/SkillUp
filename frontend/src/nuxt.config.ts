@@ -2,6 +2,44 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
+  
+  // Автоматический перезапуск при изменениях
+  vite: {
+    server: {
+      watch: {
+        usePolling: true,
+      },
+    },
+  },
+  
+  // HMR настройки
+  devServer: {
+    port: 3000,
+    host: '0.0.0.0',
+  },
 
-  modules: ['@nuxt/eslint', '@nuxt/fonts', '@nuxt/image', '@nuxt/scripts'],
+  css: ['~/assets/styles/main.scss'],
+
+  modules: [
+    '@nuxt/eslint',
+    '@nuxt/fonts',
+    '@nuxt/image',
+    '@nuxt/scripts',
+    '@vueuse/motion/nuxt',
+  ],
+
+  fonts: {
+    families: [
+      { name: 'Inter', provider: 'google', weights: [400, 500, 600, 700] },
+      { name: 'Space Grotesk', provider: 'google', weights: [500, 600, 700] },
+    ],
+  },
+
+  image: {
+    domains: [
+      'images.unsplash.com',
+      'cdn.midjourney.com',
+      'res.cloudinary.com',
+    ],
+  },
 })
