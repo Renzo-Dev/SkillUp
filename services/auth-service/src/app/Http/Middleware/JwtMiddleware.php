@@ -25,6 +25,8 @@ class JwtMiddleware
         return response()->json(['message' => 'Account is deactivated'], 403);
       }
 
+      // Устанавливаем пользователя в Auth guard
+      auth()->setUser($user);
       $request->setUserResolver(function () use ($user) {
         return $user;
       });

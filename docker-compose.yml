@@ -20,6 +20,9 @@ services:
       - RABBITMQ_PORT=5672
       - RABBITMQ_USER=${RABBITMQ_USER}
       - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
     ports:
       - '9000:9000'
     networks:
@@ -27,6 +30,7 @@ services:
     depends_on:
       - postgres
       - rabbitmq
+      - redis
 
   frontend:
     build:
@@ -89,9 +93,21 @@ services:
     networks:
       - skillup-network
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    networks:
+      - skillup-network
+
 volumes:
   postgres_data:
   rabbitmq_data:
+  redis_data:
   node_modules:
 
 networks:

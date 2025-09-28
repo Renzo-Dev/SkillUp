@@ -4,6 +4,15 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
 use Illuminate\Support\Facades\Route;
 
+// Health check endpoint
+Route::get('/auth/health', function () {
+    return response()->json([
+        'status' => 'ok',
+        'service' => 'auth-service',
+        'timestamp' => now()
+    ]);
+});
+
 // Public routes
 Route::prefix('auth')->group(function () {
   Route::post('/register', [AuthController::class, 'register']);
