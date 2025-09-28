@@ -34,11 +34,12 @@ services:
       dockerfile: Dockerfile
     container_name: frontend
     restart: unless-stopped
+    working_dir: /var/www/
+    volumes:
+      - ./frontend/src:/var/www/
+      - node_modules:/var/www/node_modules  # Исключаем node_modules из volume
     ports:
       - '3000:3000'
-    volumes:
-      - ./frontend:/app
-      - node_modules:/app/node_modules
     networks:
       - skillup-network
 
