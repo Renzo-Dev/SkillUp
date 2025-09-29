@@ -24,7 +24,7 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=
     ports:
-      - '9000:9000'
+      - '9000:80'
     networks:
       - skillup-network
     depends_on:
@@ -38,10 +38,10 @@ services:
       dockerfile: Dockerfile
     container_name: frontend
     restart: unless-stopped
-    working_dir: /var/www/
+    working_dir: /app
     volumes:
-      - ./frontend/src:/var/www/
-      - node_modules:/var/www/node_modules
+      - ./frontend/src:/app
+#      - node_modules:/app/node_modules
     environment:
       # следим за изменениями внутри docker
       - CHOKIDAR_USEPOLLING=1
