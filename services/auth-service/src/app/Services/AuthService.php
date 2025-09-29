@@ -25,27 +25,16 @@ class AuthService{
   // Регистрация нового пользователя
   public function register($data){
     try {
-      // $user = $this->userService->createUser($data);
-
-      // Временные данные пользователя
-      $user = [
-        "id" => 1,
-        "name" => $data['name'],
-        "email" => $data['email'],
-        "email_verified_at" => now(),
-        "password" => Hash::make($data['password']),
-      ];
-      
+      $user = $this->userService->createUser($data);
 
       // Генерируем токены
-      $accessToken = Str::random(64);
-      $refreshToken = Str::random(64);
+      $token = $this->jwtService->generateTokenPair($user);
 
       // Возвращаем данные с токенами
       return [
         'user' => $user,
-        'access_token' => $accessToken,
-        'refresh_token' => $refreshToken,
+        'access_token' => $token->accessToken,
+        'refresh_token' => $token->refreshToken,
       ];
 
     } catch (\Exception $e) {
