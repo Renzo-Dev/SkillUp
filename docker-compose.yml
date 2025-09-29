@@ -42,6 +42,11 @@ services:
     volumes:
       - ./frontend/src:/var/www/
       - node_modules:/var/www/node_modules
+    environment:
+      # следим за изменениями внутри docker
+      - CHOKIDAR_USEPOLLING=1
+      - NUXT_HOST=0.0.0.0
+      - NUXT_PORT=3000
     ports:
       - '3000:3000'
     networks:
