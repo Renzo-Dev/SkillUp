@@ -18,6 +18,43 @@ export default defineNuxtConfig({
     host: '0.0.0.0',
   },
 
+  // Настройки для работы в Docker
+  nitro: {
+    devProxy: {
+      '/api': {
+        target: 'http://nginx_gateway:80/api',
+        changeOrigin: true,
+      },
+    },
+  },
+
+  // Настройки для работы через nginx прокси
+  app: {
+    baseURL: '/',
+    cdnURL: '/',
+  },
+
+  // Настройки для dev-сервера
+  devServer: {
+    port: 3000,
+    host: '0.0.0.0',
+    // Разрешаем все хосты для работы через nginx
+    allowedHosts: 'all',
+  },
+
+  // Исправляем проблемы с виртуальными модулями
+  vite: {
+    server: {
+      watch: {
+        usePolling: true,
+      },
+      // Настройки для работы с виртуальными модулями
+      fs: {
+        allow: ['..', '/app'],
+      },
+    },
+  },
+
   css: ['~/assets/styles/main.scss'],
 
   modules: [
