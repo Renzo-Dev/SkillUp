@@ -13,7 +13,14 @@ return new class extends Migration
     {
         Schema::create('user_refresh_tokens', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // связь с users
+            $table->string('refresh_token', 64)->unique(); // refresh токен
+            $table->timestamp('expires_at'); // время истечения
             $table->timestamps();
+            
+            // Индексы для производительности
+            $table->index(['user_id', 'expires_at']);
+            $table->index('expires_at');
         });
     }
 

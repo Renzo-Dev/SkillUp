@@ -6,7 +6,11 @@ use App\Contracts\AuthServiceInterface;
 use App\Contracts\JwtServiceInterface;
 use App\Contracts\UserServiceInterface;
 use App\Contracts\RefreshTokenServiceInterface;
-use App\Http\Requests\LoginRequest;
+use App\Contracts\BlacklistServiceInterface;
+use App\DTOs\AuthResponseDTO;
+use App\DTOs\LoginRequestDTO;
+use App\DTOs\RegisterRequestDTO;
+use App\DTOs\TokenPairDTO;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -18,125 +22,103 @@ class AuthService implements AuthServiceInterface
     public function __construct(
         protected JwtServiceInterface $jwtService,
         protected UserServiceInterface $userService,
-        protected RefreshTokenServiceInterface $refreshTokenService
+        protected RefreshTokenServiceInterface $refreshTokenService,
+        protected BlacklistServiceInterface $blacklistService
     ) {
     }
 
     // Регистрация нового пользователя
-    public function register(array $data): array|false
+    public function register(RegisterRequestDTO $dto): ?AuthResponseDTO
     {
         try {
             // Хешируем пароль перед созданием пользователя
-            $data['password'] = Hash::make($data['password']);
-            $user = $this->userService->createUser($data);
+            $userData = $dto->toUserArray();
+            $userData['password'] = Hash::make($userData['password']);
+            
+            $user = $this->userService->createUser($userData);
 
             // Генерируем пару токенов
             $tokenPair = $this->jwtService->generateTokenPair($user);
+            $tokenPairDTO = TokenPairDTO::fromObject($tokenPair);
 
-            return [
-                'user' => $user,
-                'access_token' => $tokenPair->accessToken,
-                'refresh_token' => $tokenPair->refreshToken,
-            ];
+            return new AuthResponseDTO(
+                user: $user,
+                accessToken: $tokenPairDTO->accessToken,
+                refreshToken: $tokenPairDTO->refreshToken
+            );
         } catch (\Throwable $e) {
             Log::error('Ошибка регистрации пользователя', [
                 'error' => $e->getMessage(),
-                'data' => $data
+                'dto' => $dto->toArray()
             ]);
-            return false;
+            return null;
         }
     }
 
     // Вход пользователя
-    public function login(LoginRequest $request): array|false
-    {
-        // Получаем пользователя по email
-        $user = $this->userService->findUserByEmail($request->input('email'));
-        if (!$user) {
-            return false;
-        }
-
-        // Проверяем пароль
-        if (!Hash::check($request->input('password'), $user->password)) {
-            return false;
-        }
-
-        // Проверяем активен ли пользователь
-        if (!$this->userService->isUserActive($user)) {
-            return false;
-        }
-
-        // Обновляем дату последнего входа
-        $this->userService->updateLastLogin($user);
-
-        // Генерируем токены
-        $tokenPair = $this->jwtService->generateTokenPair($user);
-
-        return [
-            'user' => $user,
-            'access_token' => $tokenPair->accessToken,
-            'refresh_token' => $tokenPair->refreshToken,
-        ];
-    }
-
-    // Выход пользователя
-    public function logout(): bool
+    public function login(LoginRequestDTO $dto): ?AuthResponseDTO
     {
         try {
-            $token = request()->bearerToken();
-            if (!$token) {
-                return false;
+            // Получаем пользователя по email
+            $user = $this->userService->findUserByEmail($dto->email);
+            if (!$user) {
+                return null;
             }
-            // Инвалидируем токен
-            $this->jwtService->revokeToken($token);
-            return true;
+
+            // Проверяем пароль
+            if (!Hash::check($dto->password, $user->password)) {
+                return null;
+            }
+
+            // Проверяем активен ли пользователь
+            if (!$this->userService->isUserActive($user)) {
+                return null;
+            }
+
+            // Обновляем дату последнего входа
+            $this->userService->updateLastLogin($user);
+
+            // Генерируем токены
+            $tokenPair = $this->jwtService->generateTokenPair($user);
+            $tokenPairDTO = TokenPairDTO::fromObject($tokenPair);
+
+            return new AuthResponseDTO(
+                user: $user,
+                accessToken: $tokenPairDTO->accessToken,
+                refreshToken: $tokenPairDTO->refreshToken
+            );
+        } catch (\Throwable $e) {
+            Log::error('Ошибка входа пользователя', [
+                'error' => $e->getMessage(),
+                'dto' => $dto->toArray()
+            ]);
+            return null;
+        }
+    }
+
+    // Выход пользователя (только бизнес-логика)
+    public function logout(string $token): bool
+    {
+        try {
+            // Добавляем access токен в blacklist
+            $blacklistResult = $this->blacklistService->addToken($token);
+            
+            // Получаем пользователя из токена для отзыва всех его refresh токенов
+            $user = $this->jwtService->getUserFromToken($token);
+            if ($user) {
+                // Отзываем все refresh токены пользователя
+                $this->refreshTokenService->revokeAllUserTokens($user);
+            }
+            
+            // Здесь может быть дополнительная бизнес-логика
+            // например, логирование выхода, очистка сессий и т.д.
+            return $blacklistResult;
         } catch (\Throwable $e) {
             Log::error('Ошибка выхода пользователя', [
                 'error' => $e->getMessage(),
-                'token' => $token
+                'token' => $token,
             ]);
             return false;
         }
-    }
-
-    // Обновление токенов по refresh_token
-    public function refresh(string $refreshToken): array|false
-    {
-        try {
-            // Проверяем refresh token
-            $token = $this->refreshTokenService->findValidToken($refreshToken);
-            if (!$token) {
-                return false;
-            }
-            
-            $user = $token->user;
-
-            // Генерируем новую пару токенов
-            $tokenPair = $this->jwtService->generateTokenPair($user);
-
-            return [
-                'user' => $user,
-                'access_token' => $tokenPair->accessToken,
-                'refresh_token' => $tokenPair->refreshToken,
-            ];
-        } catch (\Throwable $e) {
-            Log::error('Ошибка обновления токенов', [
-                'error' => $e->getMessage(),
-                'refresh_token' => $refreshToken
-            ]);
-            return false;
-        }
-    }
-
-    // Получение текущего пользователя
-    public function getCurrentUser(): ?object
-    {
-        return Auth::user();
-    }
-
-    // Проверка аутентификации
-    public function isAuthenticated(): bool
-    {
-        return Auth::check();
     }
 }

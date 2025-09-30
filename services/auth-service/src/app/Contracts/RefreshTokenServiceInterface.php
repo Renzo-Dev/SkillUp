@@ -35,7 +35,7 @@ interface RefreshTokenServiceInterface
     /**
      * Отзыв всех токенов пользователя
      */
-    public function revokeAllUserTokens(User $user): void;
+    public function revokeAllUserTokens(User $user): bool;
 
     /**
      * Проверка валидности токена

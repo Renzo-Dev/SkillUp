@@ -2,38 +2,24 @@
 
 namespace App\Contracts;
 
-use App\Http\Requests\LoginRequest;
-use App\Http\Requests\RegisterRequest;
+use App\DTOs\AuthResponseDTO;
+use App\DTOs\LoginRequestDTO;
+use App\DTOs\RegisterRequestDTO;
 
 interface AuthServiceInterface
 {
     /**
      * Регистрация нового пользователя
      */
-    public function register(array $data): array|false;
+    public function register(RegisterRequestDTO $dto): ?AuthResponseDTO;
 
     /**
      * Вход пользователя
      */
-    public function login(LoginRequest $request): array|false;
+    public function login(LoginRequestDTO $dto): ?AuthResponseDTO;
 
     /**
      * Выход пользователя
      */
-    public function logout(): bool;
-
-    /**
-     * Обновление токенов
-     */
-    public function refresh(string $refreshToken): array|false;
-
-    /**
-     * Получение текущего пользователя
-     */
-    public function getCurrentUser(): ?object;
-
-    /**
-     * Проверка аутентификации
-     */
-    public function isAuthenticated(): bool;
+    public function logout(string $token): bool;
 }
