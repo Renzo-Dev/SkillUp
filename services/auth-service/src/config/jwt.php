@@ -55,6 +55,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Max Active Sessions
+    |--------------------------------------------------------------------------
+    |
+    | Specify the maximum number of active refresh token sessions per user.
+    | When this limit is exceeded, the oldest sessions will be revoked.
+    | Defaults to 5 sessions.
+    |
+    */
+
+    'max_sessions' => env('JWT_MAX_SESSIONS', 5),
+
+    /*
+    |--------------------------------------------------------------------------
     | JWT hashing algorithm
     |--------------------------------------------------------------------------
     |

@@ -11,10 +11,6 @@ interface JwtServiceInterface
      */
     public function generateAccessToken(User $user): string;
 
-    /**
-     * Генерация refresh токена
-     */
-    public function generateRefreshToken(User $user): string;
 
     /**
      * Генерация пары токенов (access + refresh)
@@ -49,10 +45,5 @@ interface JwtServiceInterface
     /**
      * Отзыв токена
      */
-    public function revokeToken(string $token): void;
-
-    /**
-     * Отзыв всех токенов пользователя
-     */
-    public function revokeAllUserTokens(int $userId): void;
+    public function revokeToken(string $token): bool;
 }

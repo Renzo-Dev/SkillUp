@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use App\Rules\ValidEmail;
 
 class LoginRequest extends FormRequest
 {
@@ -11,7 +12,8 @@ class LoginRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        // Разрешаем выполнение запроса всем пользователям
+        return true;
     }
 
     /**
@@ -22,8 +24,8 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            "email" => ['required', 'email'],
-            "password" => ['required'],
+            "email" => ['required', new ValidEmail()],
+            "password" => ['required', 'string', 'min:1'],
         ];
     }
 }

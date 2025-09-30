@@ -9,7 +9,7 @@ interface UserServiceInterface
     /**
      * Создание нового пользователя
      */
-    public function createUser(array $data): User;
+    public function createUser(array $data): ?User;
 
     /**
      * Поиск пользователя по ID
@@ -24,7 +24,7 @@ interface UserServiceInterface
     /**
      * Обновление пользователя
      */
-    public function updateUser(User $user, array $data): User;
+    public function updateUser(User $user, array $data): ?User;
 
     /**
      * Удаление пользователя
@@ -34,20 +34,25 @@ interface UserServiceInterface
     /**
      * Активация пользователя
      */
-    public function activateUser(User $user): User;
+    public function activateUser(User $user): ?User;
 
     /**
      * Деактивация пользователя
      */
-    public function deactivateUser(User $user): User;
+    public function deactivateUser(User $user): ?User;
 
     /**
      * Обновление времени последнего входа
      */
-    public function updateLastLogin(User $user): User;
+    public function updateLastLogin(User $user): ?User;
 
     /**
      * Проверка активности пользователя
      */
     public function isUserActive(User $user): bool;
+
+    /**
+     * Получение текущего аутентифицированного пользователя
+     */
+    public function getCurrentUser(): ?User;
 }
