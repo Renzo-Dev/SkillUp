@@ -8,6 +8,7 @@ use App\Services\UserService;
 use App\Services\AuthService;
 use App\Services\RefreshTokenService;
 use App\Services\BlacklistService;
+use App\Services\EmailVerificationService;
 use App\Repositories\UserRepository;
 use App\Repositories\RefreshTokenRepository;
 use App\Contracts\JwtServiceInterface;
@@ -15,6 +16,7 @@ use App\Contracts\UserServiceInterface;
 use App\Contracts\AuthServiceInterface;
 use App\Contracts\RefreshTokenServiceInterface;
 use App\Contracts\BlacklistServiceInterface;
+use App\Contracts\EmailVerificationServiceInterface;
 use App\Contracts\UserRepositoryInterface;
 use App\Contracts\RefreshTokenRepositoryInterface;
 
@@ -31,6 +33,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(AuthServiceInterface::class, AuthService::class); // Аутентификация
         $this->app->bind(RefreshTokenServiceInterface::class, RefreshTokenService::class); // Refresh токены
         $this->app->bind(BlacklistServiceInterface::class, BlacklistService::class); // Блэклист токенов
+        $this->app->bind(EmailVerificationServiceInterface::class, EmailVerificationService::class); // Верификация email
         $this->app->bind(UserRepositoryInterface::class, UserRepository::class); // Репозиторий пользователей
         $this->app->bind(RefreshTokenRepositoryInterface::class, RefreshTokenRepository::class); // Репозиторий refresh токенов
     }

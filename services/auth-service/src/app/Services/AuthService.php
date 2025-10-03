@@ -7,6 +7,7 @@ use App\Contracts\JwtServiceInterface;
 use App\Contracts\UserServiceInterface;
 use App\Contracts\RefreshTokenServiceInterface;
 use App\Contracts\BlacklistServiceInterface;
+use App\Contracts\EmailVerificationServiceInterface;
 use App\DTOs\AuthResponseDTO;
 use App\DTOs\LoginRequestDTO;
 use App\DTOs\RegisterRequestDTO;
@@ -22,7 +23,8 @@ class AuthService implements AuthServiceInterface
         protected JwtServiceInterface $jwtService,
         protected UserServiceInterface $userService,
         protected RefreshTokenServiceInterface $refreshTokenService,
-        protected BlacklistServiceInterface $blacklistService
+        protected BlacklistServiceInterface $blacklistService,
+        protected EmailVerificationServiceInterface $emailVerificationService
     ) {
     }
 
@@ -35,6 +37,9 @@ class AuthService implements AuthServiceInterface
             $userData['password'] = Hash::make($userData['password']);
             
             $user = $this->userService->createUser($userData);
+
+            // Отправляем письмо подтверждения email (асинхронность по мере необходимости)
+            $this->emailVerificationService->sendVerificationEmail($user);
 
             // Генерируем пару токенов
             $tokenPair = $this->jwtService->generateTokenPair($user);

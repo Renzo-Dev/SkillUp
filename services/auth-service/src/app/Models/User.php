@@ -55,6 +55,14 @@ class User extends Authenticatable implements JWTSubject
     }
 
     /**
+     * Связь с токенами подтверждения email
+     */
+    public function emailVerifications()
+    {
+        return $this->hasMany(EmailVerification::class);
+    }
+
+    /**
      * Связь с refresh токенами
      */
     public function refreshTokens()
