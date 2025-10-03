@@ -10,7 +10,7 @@ interface RefreshTokenServiceInterface
     /**
      * Создание нового refresh токена
      */
-    public function createRefreshToken(User $user, string $deviceInfo = null, string $ipAddress = null): UserRefreshToken;
+    public function createRefreshToken(User $user): UserRefreshToken;
 
     /**
      * Поиск валидного токена

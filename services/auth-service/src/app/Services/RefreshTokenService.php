@@ -14,7 +14,7 @@ class RefreshTokenService implements RefreshTokenServiceInterface
     {
     }
 
-    public function createRefreshToken(User $user, string $deviceInfo = null, string $ipAddress = null): UserRefreshToken
+    public function createRefreshToken(User $user): UserRefreshToken
     {
         // Ограничиваем количество активных сессий перед созданием нового токена
         $this->limitUserSessions($user);
