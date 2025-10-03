@@ -12,6 +12,7 @@ use App\Http\Requests\RegisterRequest;
 use App\Http\Resources\RegisterResource;
 use App\Http\Requests\LoginRequest;
 use App\Http\Resources\LoginResource;
+use App\Http\Resources\MeResource;
 
 class AuthController extends Controller
 {
@@ -61,6 +62,12 @@ class AuthController extends Controller
         } else {
             return new LogoutResource(false);
         }
+    }
+
+    public function me(Request $request)
+    {
+        $userDto = $this->authService->me();
+        return new MeResource($userDto);
     }
 
 }

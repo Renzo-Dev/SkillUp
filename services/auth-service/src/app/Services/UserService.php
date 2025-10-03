@@ -2,22 +2,24 @@
 
 namespace App\Services;
 
-use App\Models\User;
 use App\Contracts\UserServiceInterface;
 use Illuminate\Support\Facades\Log;
+use App\Contracts\UserRepositoryInterface;
+use App\Models\User; // Добавил импорт User для строгой типизации
 
-class UserService implements UserServiceInterface {
-  public function __construct(){
-  }
-
-    // Методы интерфейса UserServiceInterface, пока без реализации
+class UserService implements UserServiceInterface
+{
+    public function __construct(private UserRepositoryInterface $userRepository)
+    {
+    }
 
     // Создание нового пользователя
     public function createUser(array $data): ?User
     {
         try {
-            return User::create($data);
-        } catch (\Exception $e) {
+            return $this->userRepository->create($data);
+        } catch (\Throwable $e) {
+            // Логируем ошибку создания пользователя
             Log::error('Ошибка создания пользователя', [
                 'error' => $e->getMessage(),
                 'data' => $data,
@@ -30,8 +32,9 @@ class UserService implements UserServiceInterface {
     public function findUser(int $id): ?User
     {
         try {
-            return User::find($id);
+            return $this->userRepository->findById($id);
         } catch (\Throwable $e) {
+            // Логируем ошибку поиска по ID
             Log::error('Ошибка поиска пользователя по ID', [
                 'error' => $e->getMessage(),
                 'id' => $id,
@@ -44,8 +47,9 @@ class UserService implements UserServiceInterface {
     public function findUserByEmail(string $email): ?User
     {
         try {
-            return User::where('email', $email)->first();
+            return $this->userRepository->findByEmail($email);
         } catch (\Throwable $e) {
+            // Логируем ошибку поиска по email
             Log::error('Ошибка поиска пользователя по email', [
                 'error' => $e->getMessage(),
                 'email' => $email,
@@ -58,9 +62,9 @@ class UserService implements UserServiceInterface {
     public function updateUser(User $user, array $data): ?User
     {
         try {
-            $user->update($data);
-            return $user;
+            return $this->userRepository->update($user, $data);
         } catch (\Throwable $e) {
+            // Логируем ошибку обновления пользователя
             Log::error('Ошибка обновления пользователя', [
                 'error' => $e->getMessage(),
                 'user' => $user,
@@ -73,9 +77,9 @@ class UserService implements UserServiceInterface {
     public function deleteUser(User $user): bool
     {
         try {
-            $user->delete();
-            return true;
+            return $this->userRepository->delete($user);
         } catch (\Throwable $e) {
+            // Логируем ошибку удаления пользователя
             Log::error('Ошибка удаления пользователя', [
                 'error' => $e->getMessage(),
                 'user' => $user,
@@ -88,10 +92,9 @@ class UserService implements UserServiceInterface {
     public function activateUser(User $user): ?User
     {
         try {
-            $user->is_active = true;
-            $user->save();
-            return $user;
+            return $this->userRepository->activate($user);
         } catch (\Throwable $e) {
+            // Логируем ошибку активации пользователя
             Log::error('Ошибка активации пользователя', [
                 'error' => $e->getMessage(),
                 'user' => $user,
@@ -104,10 +107,9 @@ class UserService implements UserServiceInterface {
     public function deactivateUser(User $user): ?User
     {
         try {
-            $user->is_active = false;
-            $user->save();
-            return $user;
+            return $this->userRepository->deactivate($user);
         } catch (\Throwable $e) {
+            // Логируем ошибку деактивации пользователя
             Log::error('Ошибка деактивации пользователя', [
                 'error' => $e->getMessage(),
                 'user' => $user,
@@ -120,10 +122,9 @@ class UserService implements UserServiceInterface {
     public function updateLastLogin(User $user): ?User
     {
         try {
-            $user->last_login_at = now();
-            $user->save();
-            return $user;
+            return $this->userRepository->updateLastLogin($user);
         } catch (\Throwable $e) {
+            // Логируем ошибку обновления времени последнего входа
             Log::error('Ошибка обновления времени последнего входа', [
                 'error' => $e->getMessage(),
                 'user' => $user,
@@ -138,6 +139,7 @@ class UserService implements UserServiceInterface {
         try {
             return (bool) $user->is_active;
         } catch (\Throwable $e) {
+            // Логируем ошибку проверки активности пользователя
             Log::error('Ошибка проверки активности пользователя', [
                 'error' => $e->getMessage(),
                 'user' => $user,
@@ -152,14 +154,15 @@ class UserService implements UserServiceInterface {
         try {
             // Сначала пробуем получить через стандартный auth
             $user = auth()->user();
-            
+
             // Если не получилось, пробуем через request (для кастомного middleware)
             if (!$user && request()->user()) {
                 $user = request()->user();
             }
-            
+
             return $user;
         } catch (\Throwable $e) {
+            // Логируем ошибку получения текущего пользователя
             Log::error('Ошибка получения текущего пользователя', [
                 'error' => $e->getMessage(),
             ]);

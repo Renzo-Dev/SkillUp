@@ -5,6 +5,7 @@ namespace App\Contracts;
 use App\DTOs\AuthResponseDTO;
 use App\DTOs\LoginRequestDTO;
 use App\DTOs\RegisterRequestDTO;
+use App\DTOs\UserDTO;
 
 interface AuthServiceInterface
 {
@@ -22,4 +23,9 @@ interface AuthServiceInterface
      * Выход пользователя
      */
     public function logout(string $token): bool;
+
+    /**
+     * Текущий пользователь
+     */
+    public function me(): ?UserDTO;
 }

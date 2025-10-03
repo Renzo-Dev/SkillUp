@@ -35,8 +35,6 @@ class AuthResponseDTO
                 'name' => $this->user->name,
                 'email' => $this->user->email,
                 'is_active' => $this->user->is_active,
-                'created_at' => $this->user->created_at,
-                'updated_at' => $this->user->updated_at,
             ],
             'access_token' => $this->accessToken,
             'refresh_token' => $this->refreshToken,

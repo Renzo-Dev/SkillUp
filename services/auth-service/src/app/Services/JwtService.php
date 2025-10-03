@@ -42,13 +42,17 @@ class JwtService implements JwtServiceInterface
     }
 
     // Генерация пары токенов (access + refresh)
-    public function generateTokenPair(User $user): object
+    public function generateTokenPair(User $user): \App\DTOs\TokenPairDTO
     {
         try {
-            return (object) [
-                'accessToken' => $this->generateAccessToken($user),
-                'refreshToken' => $this->refreshTokenService->createRefreshToken($user),
-            ];
+            // Получаем access и refresh токены
+            $accessToken = $this->generateAccessToken($user);
+            $refreshTokenModel = $this->refreshTokenService->createRefreshToken($user);
+            // Возвращаем DTO с токенами
+            return new \App\DTOs\TokenPairDTO(
+                accessToken: $accessToken,
+                refreshToken: $refreshTokenModel->refresh_token
+            );
         } catch (\Throwable $e) {
             Log::error('Ошибка генерации пары токенов', [
                 'error' => $e->getMessage(),
