@@ -3,17 +3,18 @@
 namespace App\Services;
 
 use App\Contracts\RefreshTokenServiceInterface;
+use App\Contracts\RefreshTokenRepositoryInterface;
 use App\Models\User;
 use App\Models\UserRefreshToken;
 use Illuminate\Support\Facades\Log;
 
 class RefreshTokenService implements RefreshTokenServiceInterface
 {
-    public function __construct()
+    public function __construct(private RefreshTokenRepositoryInterface $refreshTokenRepository)
     {
     }
 
-    public function createRefreshToken(User $user, string $deviceInfo = null, string $ipAddress = null): UserRefreshToken
+    public function createRefreshToken(User $user): UserRefreshToken
     {
         // Ограничиваем количество активных сессий перед созданием нового токена
         $this->limitUserSessions($user);
@@ -21,7 +22,7 @@ class RefreshTokenService implements RefreshTokenServiceInterface
         // Реализация создания refresh токена
         $refreshToken = \Str::random(64);
         $expiresAt = now()->addMinutes(config('jwt.refresh_ttl'));
-        return UserRefreshToken::create([
+        return $this->refreshTokenRepository->create([
             'user_id' => $user->id,
             'refresh_token' => $refreshToken,
             'expires_at' => $expiresAt,
@@ -32,10 +33,7 @@ class RefreshTokenService implements RefreshTokenServiceInterface
     {
         try {
             // Просто возвращаем токен, если он валиден (не истёк)
-            $token = UserRefreshToken::where('refresh_token', $refreshToken)
-                ->where('expires_at', '>', now())
-                ->first();
-            return $token;
+            return $this->refreshTokenRepository->findValidToken($refreshToken);
         } catch (\Throwable $e) {
             Log::error('Ошибка поиска валидного токена', [
                 'error' => $e->getMessage(),
@@ -48,23 +46,29 @@ class RefreshTokenService implements RefreshTokenServiceInterface
     public function rotateToken(UserRefreshToken $token): UserRefreshToken
     {
         try {
-            $token->refresh_token = \Str::random(64);
-            $token->expires_at = now()->addMinutes(config('jwt.refresh_ttl'));
-            $token->save();
-            return $token;
+            $updated = $this->refreshTokenRepository->update($token, [
+                'refresh_token' => \Str::random(64),
+                'expires_at' => now()->addMinutes(config('jwt.refresh_ttl')),
+            ]);
+
+            if (!$updated) {
+                throw new \RuntimeException('Не удалось обновить refresh токен');
+            }
+
+            return $updated;
         } catch (\Throwable $e) {
             Log::error('Ошибка ротации токена', [
                 'error' => $e->getMessage(),
                 'token' => $token,
             ]);
-            return null;
+            throw $e;
         }
     }
 
     public function revokeToken(UserRefreshToken $token): void
     {
         try {
-            $token->delete();
+            $this->refreshTokenRepository->delete($token);
         } catch (\Throwable $e) {
             Log::error('Ошибка отзыва токена', [
                 'error' => $e->getMessage(),
@@ -78,7 +82,7 @@ class RefreshTokenService implements RefreshTokenServiceInterface
     {
         try {
             // Проверяем, существует ли токен
-            $token = UserRefreshToken::where('refresh_token', $refreshToken)->first();
+            $token = $this->refreshTokenRepository->findByToken($refreshToken);
             // Если токен не найден, возвращаем false
             if (!$token) {
                 return false;
@@ -100,7 +104,7 @@ class RefreshTokenService implements RefreshTokenServiceInterface
     public function revokeAllUserTokens(User $user): bool
     {
         try {
-            $tokens = UserRefreshToken::where('user_id', $user->id)->get();
+            $tokens = $this->refreshTokenRepository->getUserTokens($user);
             foreach ($tokens as $token) {
                 $this->revokeToken($token);
             }
@@ -147,7 +151,7 @@ class RefreshTokenService implements RefreshTokenServiceInterface
     public function cleanExpiredTokens(): int
     {
         try {
-            return UserRefreshToken::where('expires_at', '<', now())->delete();
+            return $this->refreshTokenRepository->deleteExpiredTokens();
         } catch (\Throwable $e) {
             Log::error('Ошибка очистки истекших токенов', [
                 'error' => $e->getMessage(),
@@ -160,7 +164,7 @@ class RefreshTokenService implements RefreshTokenServiceInterface
     public function getUserActiveTokens(User $user): \Illuminate\Database\Eloquent\Collection
     {
         try {
-            return UserRefreshToken::where('user_id', $user->id)->where('expires_at', '>', now())->get();
+            return $this->refreshTokenRepository->getUserActiveTokens($user);
         } catch (\Throwable $e) {
             Log::error('Ошибка получения активных токенов пользователя', [
                 'error' => $e->getMessage(),
@@ -181,7 +185,7 @@ class RefreshTokenService implements RefreshTokenServiceInterface
             // Если количество токенов превышает лимит, удаляем самые старые
             if ($tokens->count() >= $maxSessions) {
                 $tokensToRemove = $tokens->count() - $maxSessions + 1; // +1 для нового токена
-                $oldestTokens = $tokens->sortBy('created_at')->take($tokensToRemove);
+                $oldestTokens = $this->refreshTokenRepository->getOldestUserTokens($user, $tokensToRemove);
                 
                 foreach ($oldestTokens as $token) {
                     $this->revokeToken($token);

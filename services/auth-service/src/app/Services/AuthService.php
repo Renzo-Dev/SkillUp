@@ -13,9 +13,7 @@ use App\DTOs\RegisterRequestDTO;
 use App\DTOs\TokenPairDTO;
 use App\DTOs\UserDTO;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 class AuthService implements AuthServiceInterface
 {

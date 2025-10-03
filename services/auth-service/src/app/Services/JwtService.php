@@ -20,18 +20,13 @@ class JwtService implements JwtServiceInterface
     ) {
     }
 
-    // Генерация access токена
+    // Генерация access токена (минимальный payload: sub и jti — по умолчанию)
     public function generateAccessToken(User $user): string
     {
         try {
-            // Генерируем access токен с кастомным payload через Tymon JWT
-            $customPayload = [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'exp' => now()->addMinutes(config('jwt.ttl'))->timestamp,
-            ];
-            return JWTAuth::claims($customPayload)->fromUser($user); // вернёт JWT с кастомным payload
+            // Не добавляем кастомные claims — оставляем стандартные (sub, iat, exp, jti)
+            // Время жизни контролируется конфигом jwt.ttl
+            return JWTAuth::fromUser($user);
         } catch (\Throwable $e) {
             Log::error('Ошибка генерации access токена', [
                 'error' => $e->getMessage(),
@@ -98,9 +93,9 @@ class JwtService implements JwtServiceInterface
     public function getUserFromToken(string $token): ?User
     {
         try {
-            // Получаем id пользователя из токена
+            // Получаем id пользователя из стандартного claim sub
             $payload = JWTAuth::setToken($token)->getPayload();
-            $userId = $payload['id'] ?? null;
+            $userId = $payload['sub'] ?? null;
             if (!$userId) {
                 return null;
             }

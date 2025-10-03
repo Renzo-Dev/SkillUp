@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use App\Contracts\JwtServiceInterface;
 use App\Contracts\BlacklistServiceInterface;
 use App\Contracts\RefreshTokenServiceInterface;
+use App\DTOs\UserDTO;
+use App\Http\Resources\MeResource;
 
 class TokenController extends Controller
 {
@@ -88,14 +90,9 @@ class TokenController extends Controller
         
         if ($isValid) {
             $user = $this->jwtService->getUserFromToken($token);
-            return response()->json([
-                'success' => true,
+            $userDto = $user ? UserDTO::fromModel($user) : null;
+            return (new MeResource($userDto))->additional([
                 'valid' => true,
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                ]
             ]);
         } else {
             return response()->json([
