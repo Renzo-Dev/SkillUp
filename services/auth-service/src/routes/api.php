@@ -19,6 +19,7 @@ Route::get('/health', function () {
 // Защищенные маршруты (требуют аутентификации)
 Route::middleware([JwtAuthMiddleware::class])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::get('/me', [AuthController::class, 'me'])->name('me');
     
     // Работа с токенами
     Route::post('/token/revoke', [TokenController::class, 'revoke'])->name('token.revoke');

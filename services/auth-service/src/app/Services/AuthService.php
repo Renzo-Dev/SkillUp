@@ -11,6 +11,7 @@ use App\DTOs\AuthResponseDTO;
 use App\DTOs\LoginRequestDTO;
 use App\DTOs\RegisterRequestDTO;
 use App\DTOs\TokenPairDTO;
+use App\DTOs\UserDTO;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -80,12 +81,11 @@ class AuthService implements AuthServiceInterface
 
             // Генерируем токены
             $tokenPair = $this->jwtService->generateTokenPair($user);
-            $tokenPairDTO = TokenPairDTO::fromObject($tokenPair);
 
             return new AuthResponseDTO(
                 user: $user,
-                accessToken: $tokenPairDTO->accessToken,
-                refreshToken: $tokenPairDTO->refreshToken
+                accessToken: $tokenPair->accessToken,
+                refreshToken: $tokenPair->refreshToken
             );
         } catch (\Throwable $e) {
             Log::error('Ошибка входа пользователя', [
@@ -119,6 +119,23 @@ class AuthService implements AuthServiceInterface
                 'token' => $token,
             ]);
             return false;
+        }
+    }
+
+    // Текущий пользователь
+    public function me(): ?UserDTO
+    {
+        try {
+            $user = $this->userService->getCurrentUser();
+            if (!$user) {
+                return null;
+            }
+            return UserDTO::fromModel($user);
+        } catch (\Throwable $e) {
+            Log::error('Ошибка получения текущего пользователя', [
+                'error' => $e->getMessage(),
+            ]);
+            return null;
         }
     }
 }

@@ -33,7 +33,4 @@ interface UserRepositoryInterface
     
     // Получение всех пользователей с пагинацией
     public function getAllPaginated(int $perPage = 15): mixed;
-    
-    // Поиск пользователей по критериям
-    public function findByCriteria(array $criteria): Collection;
 }

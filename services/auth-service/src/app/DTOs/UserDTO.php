@@ -13,8 +13,6 @@ class UserDTO
         public readonly bool $isActive,
         public readonly ?string $emailVerifiedAt,
         public readonly ?string $lastLoginAt,
-        public readonly string $createdAt,
-        public readonly string $updatedAt
     ) {}
 
     /**
@@ -29,8 +27,6 @@ class UserDTO
             isActive: $user->is_active,
             emailVerifiedAt: $user->email_verified_at?->toISOString(),
             lastLoginAt: $user->last_login_at?->toISOString(),
-            createdAt: $user->created_at->toISOString(),
-            updatedAt: $user->updated_at->toISOString()
         );
     }
 
@@ -46,8 +42,6 @@ class UserDTO
             isActive: $data['is_active'] ?? true,
             emailVerifiedAt: $data['email_verified_at'] ?? null,
             lastLoginAt: $data['last_login_at'] ?? null,
-            createdAt: $data['created_at'],
-            updatedAt: $data['updated_at']
         );
     }
 
@@ -63,8 +57,6 @@ class UserDTO
             'is_active' => $this->isActive,
             'email_verified_at' => $this->emailVerifiedAt,
             'last_login_at' => $this->lastLoginAt,
-            'created_at' => $this->createdAt,
-            'updated_at' => $this->updatedAt,
         ];
     }
 }
