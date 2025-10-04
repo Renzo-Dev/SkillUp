@@ -9,9 +9,9 @@ use Illuminate\Support\Str;
 
 
 
-class UserRefreshToken extends Model
+class RefreshToken extends Model
 {
-    protected $table = 'user_refresh_tokens';
+    protected $table = 'refresh_tokens';
 
     protected $fillable = [
         'user_id',

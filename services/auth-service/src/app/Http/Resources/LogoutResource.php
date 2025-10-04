@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\DTOs\UserDTO;
 
 /**
  * Ресурс для JSON ответа при выходе из системы
@@ -24,7 +25,6 @@ class LogoutResource extends JsonResource
             'message'   => $this->resource
                 ? 'Успешный выход из системы'
                 : 'Ошибка при выходе из системы',
-            'timestamp' => now()->toISOString(),
         ];
     }
 }

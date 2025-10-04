@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class EmailVerification extends Model
 {
-    use HasFactory;
+    use HasFactory; 
 
     protected $table = 'email_verification_tokens';
 
@@ -33,5 +33,4 @@ class EmailVerification extends Model
         return $this->belongsTo(User::class);
     }
 }
-
 

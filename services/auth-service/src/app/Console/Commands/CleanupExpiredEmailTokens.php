@@ -2,25 +2,29 @@
 
 namespace App\Console\Commands;
 
-use App\Contracts\EmailVerificationServiceInterface;
 use Illuminate\Console\Command;
 
 class CleanupExpiredEmailTokens extends Command
 {
-    protected $signature = 'email:cleanup-expired';
-    protected $description = 'Удалить истекшие токены подтверждения email';
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'app:cleanup-expired-email-tokens';
 
-    public function __construct(private EmailVerificationServiceInterface $service)
-    {
-        parent::__construct();
-    }
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Command description';
 
-    public function handle(): int
+    /**
+     * Execute the console command.
+     */
+    public function handle()
     {
-        $deleted = $this->service->cleanupExpiredTokens();
-        $this->info("Удалено записей: {$deleted}");
-        return self::SUCCESS;
+        //
     }
 }
-
-

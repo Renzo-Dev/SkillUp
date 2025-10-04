@@ -1,9 +1,8 @@
 <?php
 
-namespace App\Contracts;
+namespace App\Contracts\Repositories;
 
 use App\Models\User;
-use Illuminate\Database\Eloquent\Collection;
 
 interface UserRepositoryInterface
 {
@@ -21,6 +20,9 @@ interface UserRepositoryInterface
     
     // Удаление пользователя
     public function delete(User $user): bool;
+
+    // Удаление пользователя по ID
+    public function deleteById(int $id): bool;
     
     // Активация пользователя
     public function activate(User $user): ?User;
@@ -30,7 +32,4 @@ interface UserRepositoryInterface
     
     // Обновление времени последнего входа
     public function updateLastLogin(User $user): ?User;
-    
-    // Получение всех пользователей с пагинацией
-    public function getAllPaginated(int $perPage = 15): mixed;
 }

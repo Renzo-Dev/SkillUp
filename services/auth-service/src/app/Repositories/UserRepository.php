@@ -2,73 +2,101 @@
 
 namespace App\Repositories;
 
-use App\Contracts\UserRepositoryInterface;
 use App\Models\User;
+use Contracts\Repositories\UserRepositoryInterface;
+use Illuminate\Support\Facades\Log;
 
 class UserRepository implements UserRepositoryInterface
 {
-    public function __construct(private User $user)
-    {
+  public function create(array $data): ?User
+  {
+    try {
+      return User::create($data);
+    } catch (\Exception $e) {
+      Log::error('Error creating user: ' . $e->getMessage());
+      return null;
     }
 
-    // Создание пользователя
-    public function create(array $data): ?User
-    {
-        return $this->user->create($data);
+  }
+
+  public function findById(int $id): ?User
+  {
+    try {
+      return User::find($id);
+    } catch (\Exception $e) {
+      Log::error('Error finding user by id: ' . $e->getMessage());
+      return null;
+    }
+  }
+  
+  public function findByEmail(string $email): ?User
+  {
+    try {
+      return User::where('email', $email)->first();
+    } catch (\Exception $e) {
+      Log::error('Error finding user by email: ' . $e->getMessage());
+      return null;
+    }
+  }
+
+  public function update(User $user, array $data): ?User
+  {
+    try {
+      return $user->update($data);
+    } catch (\Exception $e) {
+      Log::error('Error updating user: ' . $e->getMessage());
+      return null;
+    }
+  }
+
+  public function delete(User $user): bool
+  {
+    try {
+      return $user->delete();
+    } catch (\Exception $e) {
+      Log::error('Error updating user: ' . $e->getMessage());
+      return false;
     }
 
-    // Поиск пользователя по ID
-    public function findById(int $id): ?User
-    {
-        return $this->user->find($id);
-    }
+  }
 
-    // Поиск пользователя по email
-    public function findByEmail(string $email): ?User
-    {
-        return $this->user->where('email', $email)->first();
+  public function deleteById(int $id): bool
+  {
+    try {
+      return User::where('id', $id)->delete();
+    } catch (\Exception $e) {
+      Log::error('Error deleting user by id: ' . $e->getMessage());
+      return false;
     }
+  }
 
-    // Обновление пользователя
-    public function update(User $user, array $data): ?User
-    {
-        $user->update($data);
-        return $user;
+  public function activate(User $user): ?User
+  {
+    try {
+      return $user->update(['is_active' => true]);
+    } catch (\Exception $e) {
+      Log::error('Error activating user: ' . $e->getMessage());
+      return null;
     }
+  }
 
-    // Удаление пользователя
-    public function delete(User $user): bool
-    {
-        return $user->delete();
+  public function deactivate(User $user): ?User
+  {
+    try {
+      return $user->update(['is_active' => false]);
+    } catch (\Exception $e) {
+      Log::error('Error deactivating user: ' . $e->getMessage());
+      return null;
     }
+  }
 
-    // Активация пользователя
-    public function activate(User $user): ?User
-    {
-        $user->is_active = true;
-        $user->save();
-        return $user;
+  public function updateLastLogin(User $user): ?User
+  {
+    try {
+      return $user->update(['last_login_at' => now()]);
+    } catch (\Exception $e) {
+      Log::error('Error updating last login: ' . $e->getMessage());
+      return null;
     }
-
-    // Деактивация пользователя
-    public function deactivate(User $user): ?User
-    {
-        $user->is_active = false;
-        $user->save();
-        return $user;
-    }
-
-    // Обновление времени последнего входа
-    public function updateLastLogin(User $user): ?User
-    {
-        $user->last_login_at = now();
-        $user->save();
-        return $user;
-    }
-
-    // Получение всех пользователей с пагинацией
-    public function getAllPaginated(int $perPage = 15): mixed
-    {
-        return $this->user->paginate($perPage);
-    }
+  }
 }

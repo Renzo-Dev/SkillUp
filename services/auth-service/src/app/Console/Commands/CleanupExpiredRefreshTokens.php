@@ -2,25 +2,29 @@
 
 namespace App\Console\Commands;
 
-use App\Contracts\RefreshTokenServiceInterface;
 use Illuminate\Console\Command;
 
 class CleanupExpiredRefreshTokens extends Command
 {
-    protected $signature = 'refresh:cleanup-expired';
-    protected $description = 'Удалить истекшие refresh токены';
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'app:cleanup-expired-refresh-tokens';
 
-    public function __construct(private RefreshTokenServiceInterface $service)
-    {
-        parent::__construct();
-    }
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Command description';
 
-    public function handle(): int
+    /**
+     * Execute the console command.
+     */
+    public function handle()
     {
-        $deleted = $this->service->cleanExpiredTokens();
-        $this->info("Удалено истекших refresh токенов: {$deleted}");
-        return self::SUCCESS;
+        //
     }
 }
-
-

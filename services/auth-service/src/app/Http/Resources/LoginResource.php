@@ -29,10 +29,6 @@ class LoginResource extends JsonResource
                 'success' => true,
                 'message' => 'Успешная авторизация',
                 'data' => $this->resource->toArray(),
-                'meta' => [
-                    'timestamp' => now()->toISOString(),
-                    'version' => '1.0'
-                ]
             ];
         }
 
@@ -41,10 +37,6 @@ class LoginResource extends JsonResource
             'success' => true,
             'message' => 'Успешная авторизация',
             'data' => $this->resource,
-            'meta' => [
-                'timestamp' => now()->toISOString(),
-                'version' => '1.0'
-            ]
         ];
     }
 }
