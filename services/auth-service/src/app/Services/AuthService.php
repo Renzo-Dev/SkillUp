@@ -2,125 +2,119 @@
 
 namespace App\Services;
 
-use App\Contracts\AuthServiceInterface;
-use App\Contracts\JwtServiceInterface;
-use App\Contracts\UserServiceInterface;
-use App\Contracts\RefreshTokenServiceInterface;
-use App\Contracts\BlacklistServiceInterface;
-use App\Contracts\EmailVerificationServiceInterface;
+use App\Contracts\Services\AuthServiceInterface;
+use App\DTOs\RegisterRequestDTO;
 use App\DTOs\AuthResponseDTO;
 use App\DTOs\LoginRequestDTO;
-use App\DTOs\RegisterRequestDTO;
-use App\DTOs\TokenPairDTO;
 use App\DTOs\UserDTO;
+use App\Contracts\Services\CustomLoggerInterface;
+use App\Contracts\Services\UserServiceInterface;
+use App\Events\AuthEventPublisher;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
+use App\Contracts\Services\TokenServiceInterface;
+use App\Contracts\Services\EmailVerificationServiceInterface;
+use App\Models\User;
 
+// Пустой сервис авторизации, реализует интерфейс AuthServiceInterface
 class AuthService implements AuthServiceInterface
 {
-    // Внедряем зависимости через конструктор
-    public function __construct(
-        protected JwtServiceInterface $jwtService,
-        protected UserServiceInterface $userService,
-        protected RefreshTokenServiceInterface $refreshTokenService,
-        protected BlacklistServiceInterface $blacklistService,
-        protected EmailVerificationServiceInterface $emailVerificationService
-    ) {
-    }
+  public function __construct(
+    private CustomLoggerInterface $logger,
+    private UserServiceInterface $userService,
+    private AuthEventPublisher $eventPublisher,
+    private TokenServiceInterface $tokenService,
+    private EmailVerificationServiceInterface $emailVerificationService
+  ) {}
 
     // Регистрация нового пользователя
     public function register(RegisterRequestDTO $dto): ?AuthResponseDTO
     {
-        try {
-            // Хешируем пароль перед созданием пользователя
-            $userData = $dto->toUserArray();
-            $userData['password'] = Hash::make($userData['password']);
-            
-            $user = $this->userService->createUser($userData);
+      try {
+        $userData = $dto->toUserArray();
+        
+        $user = $this->userService->createUser($userData);
+        $tokenPair = $this->tokenService->generateTokenPair($user);
 
-            // Отправляем письмо подтверждения email (асинхронность по мере необходимости)
-            $this->emailVerificationService->sendVerificationEmail($user);
+        // Отправляем событие регистрации пользователя
+        $this->eventPublisher->publishUserRegistered([
+          'user_id' => $user->id,
+          'email' => $user->email,
+          'name' => $user->name,
+          'registered_at' => now()->toISOString()
+        ]);
 
-            // Генерируем пару токенов
-            $tokenPair = $this->jwtService->generateTokenPair($user);
-            $tokenPairDTO = TokenPairDTO::fromObject($tokenPair);
+        $authResponseDTO = new AuthResponseDTO($user, $tokenPair['access_token'], $tokenPair['refresh_token']);
 
-            return new AuthResponseDTO(
-                user: $user,
-                accessToken: $tokenPairDTO->accessToken,
-                refreshToken: $tokenPairDTO->refreshToken
-            );
-        } catch (\Throwable $e) {
-            Log::error('Ошибка регистрации пользователя', [
-                'error' => $e->getMessage(),
-                'dto' => $dto->toArray()
-            ]);
-            return null;
-        }
+        return $authResponseDTO;
+
+      } catch (\Exception $e) {
+        $this->logger->serviceError('Ошибка при регистрации пользователя: ' . $e->getMessage());
+        return null;
+      }
     }
 
     // Вход пользователя
     public function login(LoginRequestDTO $dto): ?AuthResponseDTO
     {
         try {
-            // Получаем пользователя по email
-            $user = $this->userService->findUserByEmail($dto->email);
-            if (!$user) {
+            // Находим пользователя по email (возвращает UserDTO)
+            $userDTO = $this->userService->findUserByEmail($dto->email);
+            if (!$userDTO) {
+                $this->logger->serviceError('Пользователь не найден: ' . $dto->email);
+                return null;
+            }
+
+            // Получаем модель пользователя по ID для проверки пароля
+            $userModel = User::find($userDTO->id);
+            if (!$userModel) {
+                $this->logger->serviceError('Модель пользователя не найдена: ' . $dto->email);
                 return null;
             }
 
             // Проверяем пароль
-            if (!Hash::check($dto->password, $user->password)) {
+            if (!$this->userService->checkPassword($userModel, $dto->password)) {
+                $this->logger->serviceError('Неверный пароль для пользователя: ' . $dto->email);
                 return null;
             }
 
-            // Проверяем активен ли пользователь
-            if (!$this->userService->isUserActive($user)) {
+            // Проверяем активность пользователя
+            if (!$userDTO->isActive) {
+                $this->logger->serviceError('Пользователь деактивирован: ' . $dto->email);
                 return null;
             }
-
-            // Обновляем дату последнего входа
-            $this->userService->updateLastLogin($user);
 
             // Генерируем токены
-            $tokenPair = $this->jwtService->generateTokenPair($user);
+            $tokenPair = $this->tokenService->generateTokenPair($userModel);
 
-            return new AuthResponseDTO(
-                user: $user,
-                accessToken: $tokenPair->accessToken,
-                refreshToken: $tokenPair->refreshToken
-            );
-        } catch (\Throwable $e) {
-            Log::error('Ошибка входа пользователя', [
-                'error' => $e->getMessage(),
-                'dto' => $dto->toArray()
+            // Обновляем время последнего входа
+            $this->userService->updateLastLogin($userModel);
+
+            // Проверяем верификацию email
+            $emailVerified = $this->emailVerificationService->isEmailVerified($userModel, $userModel->email);
+
+            // Отправляем событие входа пользователя
+            $this->eventPublisher->publishUserLoggedIn([
+                'user_id' => $userModel->id,
+                'email' => $userModel->email,
+                'logged_in_at' => now()->toISOString()
             ]);
+
+            return new AuthResponseDTO($userModel, $tokenPair['access_token'], $tokenPair['refresh_token'], $emailVerified);
+
+        } catch (\Exception $e) {
+            $this->logger->serviceError('Ошибка при входе пользователя: ' . $e->getMessage());
             return null;
         }
     }
 
-    // Выход пользователя (только бизнес-логика)
+    // Выход пользователя
     public function logout(string $token): bool
     {
         try {
-            // Добавляем access токен в blacklist
-            $blacklistResult = $this->blacklistService->addToken($token);
-            
-            // Получаем пользователя из токена для отзыва всех его refresh токенов
-            $user = $this->jwtService->getUserFromToken($token);
-            if ($user) {
-                // Отзываем все refresh токены пользователя
-                $this->refreshTokenService->revokeAllUserTokens($user);
-            }
-            
-            // Здесь может быть дополнительная бизнес-логика
-            // например, логирование выхода, очистка сессий и т.д.
-            return $blacklistResult;
-        } catch (\Throwable $e) {
-            Log::error('Ошибка выхода пользователя', [
-                'error' => $e->getMessage(),
-                'token' => $token,
-            ]);
+            // Отзываем токен через tokenService
+            return $this->tokenService->revokeToken($token);
+        } catch (\Exception $e) {
+            $this->logger->serviceError('Ошибка при выходе пользователя: ' . $e->getMessage());
             return false;
         }
     }
@@ -128,17 +122,50 @@ class AuthService implements AuthServiceInterface
     // Текущий пользователь
     public function me(): ?UserDTO
     {
+      try {
+        // Возвращаем DTO напрямую из текущего пользователя без userService
+        $user = auth()->user();
+        return $user ? UserDTO::fromModel($user) : null;
+      } catch (\Exception $e) {
+        $this->logger->serviceError('Ошибка при получении информации о текущем пользователе: ' . $e->getMessage());
+        return null;
+      }
+    }
+
+    // Обновление токена
+    public function refreshToken(string $token): ?AuthResponseDTO
+    {
         try {
-            $user = $this->userService->getCurrentUser();
+            // Обновляем токен через tokenService
+            $tokenPair = $this->tokenService->refreshToken($token);
+            if (!$tokenPair) {
+                return null;
+            }
+            
+            // Получаем пользователя из токена
+            $user = auth()->user();
             if (!$user) {
                 return null;
             }
-            return UserDTO::fromModel($user);
-        } catch (\Throwable $e) {
-            Log::error('Ошибка получения текущего пользователя', [
-                'error' => $e->getMessage(),
-            ]);
+            
+            return new AuthResponseDTO($user, $tokenPair['access_token'], $tokenPair['refresh_token']);
+        } catch (\Exception $e) {
+            $this->logger->serviceError('Ошибка при обновлении токена: ' . $e->getMessage());
             return null;
         }
     }
+
+    /**
+     * Отзыв токена
+     */
+    public function revokeToken(string $token): bool
+    {
+        try {
+            return $this->tokenService->revokeToken($token);
+        } catch (\Exception $e) {
+            $this->logger->serviceError('Ошибка при отзыве токена: ' . $e->getMessage());
+            return false;
+        }
+    }
+
 }

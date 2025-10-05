@@ -11,14 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('user_refresh_tokens', function (Blueprint $table) {
+        Schema::create('refresh_tokens', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // связь с users
-            $table->string('refresh_token', 64)->unique(); // refresh токен
-            $table->timestamp('expires_at'); // время истечения
+            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Связь с пользователем
+            $table->string('refresh_token', 500)->unique(); // Токен обновления
+            $table->timestamp('expires_at'); // Время истечения токена
             $table->timestamps();
             
-            // Индексы для производительности
+            // Индексы для оптимизации запросов
             $table->index(['user_id', 'expires_at']);
             $table->index('expires_at');
         });
@@ -29,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('user_refresh_tokens');
+        Schema::dropIfExists('refresh_tokens');
     }
 };

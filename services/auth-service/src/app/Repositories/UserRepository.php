@@ -2,73 +2,114 @@
 
 namespace App\Repositories;
 
-use App\Contracts\UserRepositoryInterface;
 use App\Models\User;
+use App\Contracts\Repositories\UserRepositoryInterface;
+use Illuminate\Support\Facades\Log;
+
 
 class UserRepository implements UserRepositoryInterface
 {
-    public function __construct(private User $user)
-    {
-    }
-
     // Создание пользователя
     public function create(array $data): ?User
     {
-        return $this->user->create($data);
+        try {
+            return User::create($data);
+        } catch (\Exception $e) {
+            Log::error('Ошибка при создании пользователя: ' . $e->getMessage());
+            return null;
+        }
     }
 
     // Поиск пользователя по ID
     public function findById(int $id): ?User
     {
-        return $this->user->find($id);
+        try {
+            return User::find($id);
+        } catch (\Exception $e) {
+            Log::error('Ошибка при поиске пользователя по ID: ' . $e->getMessage());
+            return null;
+        }
     }
 
     // Поиск пользователя по email
     public function findByEmail(string $email): ?User
     {
-        return $this->user->where('email', $email)->first();
+        try {
+            return User::where('email', $email)->first();
+        } catch (\Exception $e) {
+            Log::error('Ошибка при поиске пользователя по email: ' . $e->getMessage());
+            return null;
+        }
     }
 
     // Обновление пользователя
     public function update(User $user, array $data): ?User
     {
-        $user->update($data);
-        return $user;
+        try {
+            $user->update($data);
+            return $user->fresh();
+        } catch (\Exception $e) {
+            Log::error('Ошибка при обновлении пользователя: ' . $e->getMessage());
+            return null;
+        }
     }
 
     // Удаление пользователя
     public function delete(User $user): bool
     {
-        return $user->delete();
+        try {
+            return (bool) $user->delete();
+        } catch (\Exception $e) {
+            Log::error('Ошибка при удалении пользователя: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    // Удаление пользователя по ID
+    public function deleteById(int $id): bool
+    {
+        try {
+            // Возвращаем true, если удалено хотя бы 1, иначе false
+            return User::where('id', $id)->delete() > 0;
+        } catch (\Exception $e) {
+            Log::error('Ошибка при удалении пользователя по ID: ' . $e->getMessage());
+            return false;
+        }
     }
 
     // Активация пользователя
     public function activate(User $user): ?User
     {
-        $user->is_active = true;
-        $user->save();
-        return $user;
+        try {
+            $user->update(['is_active' => true]);
+            return $user->fresh();
+        } catch (\Exception $e) {
+            Log::error('Ошибка при активации пользователя: ' . $e->getMessage());
+            return null;
+        }
     }
 
     // Деактивация пользователя
     public function deactivate(User $user): ?User
     {
-        $user->is_active = false;
-        $user->save();
-        return $user;
+        try {
+            $user->update(['is_active' => false]);
+            return $user->fresh();
+        } catch (\Exception $e) {
+            Log::error('Ошибка при деактивации пользователя: ' . $e->getMessage());
+            return null;
+        }
     }
 
-    // Обновление времени последнего входа
+    // Обновление времени последнего входа пользователя
     public function updateLastLogin(User $user): ?User
     {
-        $user->last_login_at = now();
-        $user->save();
-        return $user;
-    }
-
-    // Получение всех пользователей с пагинацией
-    public function getAllPaginated(int $perPage = 15): mixed
-    {
-        return $this->user->paginate($perPage);
+        try {
+            $user->update(['last_login_at' => now()]);
+            return $user->fresh();
+        } catch (\Exception $e) {
+            Log::error('Ошибка при обновлении времени последнего входа: ' . $e->getMessage());
+            return null;
+        }
     }
 }

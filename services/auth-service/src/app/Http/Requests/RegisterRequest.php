@@ -4,8 +4,8 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Rules\StrongPassword;
-use App\Rules\ValidName;
 use App\Rules\ValidEmail;
+use App\Rules\ValidName;
 
 class RegisterRequest extends FormRequest
 {
@@ -30,6 +30,18 @@ class RegisterRequest extends FormRequest
             "email" => ['required', 'unique:users,email', new ValidEmail()],
             "password" => ['required', 'confirmed', new StrongPassword()],
             "password_confirmation" => "required|string",
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            "name.required" => "Name is required",
+            "email.required" => "Email is required",
+            "password.required" => "Password is required",
+            "email.unique" => "Email already exists",
+            "password.confirmed" => "Password confirmation does not match",
+            "password_confirmation.required" => "Password confirmation is required",
         ];
     }
 }

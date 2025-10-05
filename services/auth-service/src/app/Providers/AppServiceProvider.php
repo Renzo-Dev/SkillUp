@@ -3,22 +3,28 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use App\Services\JwtService;
-use App\Services\UserService;
+// Регистрируем интерфейсы и реализации сервисов
+use App\Contracts\Services\AuthServiceInterface;
 use App\Services\AuthService;
-use App\Services\RefreshTokenService;
-use App\Services\BlacklistService;
-use App\Services\EmailVerificationService;
+use App\Contracts\Services\UserServiceInterface;
+use App\Services\UserService;
+use App\Contracts\Services\BlackListServiceInterface;
+use App\Services\BlackListService;
+use App\Contracts\Services\JwtServiceInterface;
+use App\Services\JwtService;
+use App\Contracts\Services\CustomLoggerInterface;
+use App\Services\CustomLoggerService;
+use App\Contracts\Repositories\UserRepositoryInterface;
 use App\Repositories\UserRepository;
+use App\Contracts\Repositories\RefreshTokenRepositoryInterface;
 use App\Repositories\RefreshTokenRepository;
-use App\Contracts\JwtServiceInterface;
-use App\Contracts\UserServiceInterface;
-use App\Contracts\AuthServiceInterface;
-use App\Contracts\RefreshTokenServiceInterface;
-use App\Contracts\BlacklistServiceInterface;
-use App\Contracts\EmailVerificationServiceInterface;
-use App\Contracts\UserRepositoryInterface;
-use App\Contracts\RefreshTokenRepositoryInterface;
+use App\Contracts\Services\TokenServiceInterface;
+use App\Services\TokenService;
+use App\Contracts\TokenInterface;
+use App\Contracts\Services\RabbitMQServiceInterface;
+use App\Services\RabbitMQService;
+use App\Contracts\Services\EmailVerificationServiceInterface;
+use App\Services\EmailVerificationService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -27,15 +33,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Привязываем интерфейсы к конкретным реализациям (DI)
-        $this->app->bind(JwtServiceInterface::class, JwtService::class); // JWT сервис
-        $this->app->bind(UserServiceInterface::class, UserService::class); // Работа с пользователями
-        $this->app->bind(AuthServiceInterface::class, AuthService::class); // Аутентификация
-        $this->app->bind(RefreshTokenServiceInterface::class, RefreshTokenService::class); // Refresh токены
-        $this->app->bind(BlacklistServiceInterface::class, BlacklistService::class); // Блэклист токенов
-        $this->app->bind(EmailVerificationServiceInterface::class, EmailVerificationService::class); // Верификация email
-        $this->app->bind(UserRepositoryInterface::class, UserRepository::class); // Репозиторий пользователей
-        $this->app->bind(RefreshTokenRepositoryInterface::class, RefreshTokenRepository::class); // Репозиторий refresh токенов
+        // Биндим AuthServiceInterface на AuthService
+        $this->app->bind(AuthServiceInterface::class, AuthService::class);
+        $this->app->bind(UserServiceInterface::class, UserService::class);
+        $this->app->bind(JwtServiceInterface::class, JwtService::class);
+        $this->app->bind(CustomLoggerInterface::class, CustomLoggerService::class);
+        $this->app->bind(UserRepositoryInterface::class, UserRepository::class);
+        $this->app->bind(RefreshTokenRepositoryInterface::class, RefreshTokenRepository::class);
+        $this->app->bind(BlackListServiceInterface::class, BlackListService::class);
+        $this->app->bind(TokenServiceInterface::class, TokenService::class);
+        $this->app->bind(TokenInterface::class, JwtService::class);
+        $this->app->bind(RabbitMQServiceInterface::class, RabbitMQService::class);
+        $this->app->bind(EmailVerificationServiceInterface::class, EmailVerificationService::class);
     }
 
     /**
@@ -43,7 +52,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Здесь можно добавить инициализацию событий, кастомных валидаторов и т.д.
         // Пока ничего не требуется
     }
 }

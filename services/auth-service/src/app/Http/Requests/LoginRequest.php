@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Rules\ValidEmail;
+use App\Rules\StrongPassword;
 
 class LoginRequest extends FormRequest
 {
@@ -25,7 +26,15 @@ class LoginRequest extends FormRequest
     {
         return [
             "email" => ['required', new ValidEmail()],
-            "password" => ['required', 'string', 'min:1'],
+            "password" => ['required', 'string', new StrongPassword()],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            "email.required" => "Email is required",
+            "password.required" => "Password is required",
         ];
     }
 }

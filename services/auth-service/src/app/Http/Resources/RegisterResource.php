@@ -30,10 +30,6 @@ class RegisterResource extends JsonResource
                 'success' => true,
                 'message' => 'Успешная регистрация',
                 'data' => $this->resource->toArray(),
-                'meta' => [
-                    'timestamp' => now()->toISOString(),
-                    'version' => '1.0'
-                ]
             ];
         }
 
@@ -42,10 +38,6 @@ class RegisterResource extends JsonResource
             'success' => true,
             'message' => 'Успешная регистрация',
             'data' => $this->resource,
-            'meta' => [
-                'timestamp' => now()->toISOString(),
-                'version' => '1.0'
-            ]
         ];
     }
 }

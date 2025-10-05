@@ -32,25 +32,24 @@ services:
       - rabbitmq
       - redis
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: frontend
-    restart: unless-stopped
-    working_dir: /app
-    volumes:
-      - ./frontend/src:/app
-#      - node_modules:/app/node_modules
-    environment:
-      # следим за изменениями внутри docker
-      - CHOKIDAR_USEPOLLING=1
-      - NUXT_HOST=0.0.0.0
-      - NUXT_PORT=3000
-    ports:
-      - '3000:3000'
-    networks:
-      - skillup-network
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: frontend
+  #   restart: unless-stopped
+  #   working_dir: /app
+  #   volumes:
+  #     - ./frontend/src:/app
+  #     - node_modules:/app/node_modules
+  #   environment:
+  #     - CHOKIDAR_USEPOLLING=1
+  #     - NUXT_HOST=0.0.0.0
+  #     - NUXT_PORT=3000
+  #   ports:
+  #     - '3000:3000'
+  #   networks:
+  #     - skillup-network
 
   nginx:
     image: nginx:alpine
@@ -60,14 +59,12 @@ services:
       - '80:80'
       # - '443:443'
     volumes:
-      # - ./services:/var/www/html
-      - ./services/nginx/nginx-main.conf:/etc/nginx/nginx.conf:ro
-      - ./services/nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./services/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     networks:
       - skillup-network
     depends_on:
       - auth-service
-      - frontend
+      # - frontend
 
   postgres:
     image: postgres:15
@@ -79,6 +76,8 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - skillup-network
 
@@ -92,6 +91,8 @@ services:
     ports:
       - '5672:5672'
       - '15672:15672'
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
     networks:
       - skillup-network
 
@@ -101,14 +102,16 @@ services:
     restart: unless-stopped
     ports:
       - '6379:6379'
+    volumes:
+      - redis_data:/data
     networks:
       - skillup-network
 
-# volumes:
-#   postgres_data:
-#   rabbitmq_data:
-#   redis_data:
-#   node_modules:
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  redis_data:
+  node_modules:
 
 networks:
   skillup-network:

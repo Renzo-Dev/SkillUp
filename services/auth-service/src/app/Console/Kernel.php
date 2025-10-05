@@ -12,8 +12,17 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        $schedule->command('email:cleanup-expired')->daily(); // каждый день очистка истекших токенов email
-        $schedule->command('refresh:cleanup-expired')->hourly(); // каждый час очистка истекших токенов refresh
+        // Очистка истекших refresh токенов каждые 6 часов
+        $schedule->command('tokens:cleanup-refresh')
+            ->everySixHours()
+            ->withoutOverlapping()
+            ->runInBackground();
+
+        // Очистка истекших email токенов каждые 6 часов
+        $schedule->command('tokens:cleanup-email')
+            ->everySixHours()
+            ->withoutOverlapping()
+            ->runInBackground();
     }
 
     /**
@@ -22,7 +31,7 @@ class Kernel extends ConsoleKernel
     protected function commands(): void
     {
         $this->load(__DIR__.'/Commands');
+
+        require base_path('routes/console.php');
     }
 }
-
-

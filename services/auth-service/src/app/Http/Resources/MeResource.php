@@ -28,10 +28,6 @@ class MeResource extends JsonResource
                 'success' => true,
                 'message' => 'Текущий пользователь',
                 'data' => $this->resource->toArray(),
-                'meta' => [
-                    'timestamp' => now()->toISOString(),
-                    'version' => '1.0'
-                ]
             ];
         }
 
@@ -39,12 +35,7 @@ class MeResource extends JsonResource
             'success' => true,
             'message' => 'Текущий пользователь',
             'data' => $this->resource,
-            'meta' => [
-                'timestamp' => now()->toISOString(),
-                'version' => '1.0'
-            ]
         ];
     }
 }
-
 

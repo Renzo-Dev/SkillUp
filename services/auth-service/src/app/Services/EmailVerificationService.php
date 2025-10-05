@@ -2,123 +2,234 @@
 
 namespace App\Services;
 
-use App\Contracts\EmailVerificationServiceInterface;
-use App\Models\EmailVerification;
+use App\Contracts\Services\EmailVerificationServiceInterface;
+use App\Contracts\Services\CustomLoggerInterface;
+use App\Contracts\Services\UserServiceInterface;
+use App\Events\EmailEventPublisher;
 use App\Models\User;
-use Illuminate\Support\Facades\Log;
+use App\Models\EmailVerification;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class EmailVerificationService implements EmailVerificationServiceInterface
 {
-    /**
-     * Сгенерировать и отправить письмо с токеном подтверждения
-     */
-    public function sendVerificationEmail(User $user, ?string $email = null): EmailVerification
-    {
-        $email = $email ?: $user->email;
-
-        // Удаляем старые неподтверждённые записи для этого email
-        EmailVerification::where('user_id', $user->id)
-            ->where('email', $email)
-            ->whereNull('verified_at')
-            ->delete();
-
-        $token = $this->generateToken64UrlSafe(); // 64 символа, URL-safe
-        $expiresAt = now()->addHours(24);
-
-        $verification = EmailVerification::create([
-            'user_id' => $user->id,
-            'email' => $email,
-            'token' => $token,
-            'expires_at' => $expiresAt,
-        ]);
-
-        // Здесь в дальнейшем будет публикация события/сообщения в шину
-        // (RabbitMQ/NotificationService) с передачей token и email
-        return $verification;
-    }
+    public function __construct(
+        private CustomLoggerInterface $logger,
+        private EmailEventPublisher $emailEventPublisher,
+        private UserServiceInterface $userService
+    ) {}
 
     /**
-     * Подтверждение email по токену
+     * Создание токена верификации для пользователя
      */
-    public function verifyByToken(string $token): bool
+    public function createVerificationToken(User $user, string $email): ?EmailVerification
     {
-        $verification = EmailVerification::where('token', $token)->first();
-        if (!$verification) {
-            return false; // Неверный токен
+        try {
+            // Удаляем старые токены для этого email
+            $this->revokeAllTokens($user);
+
+            // Создаем новый токен
+            $token = EmailVerification::create([
+                'user_id' => $user->id,
+                'email' => $email,
+                'token' => Str::random(64),
+                'expires_at' => Carbon::now()->addHours(24), // Токен действует 24 часа
+            ]);
+
+            $this->logger->serviceInfo("Создан токен верификации для пользователя {$user->id}, email: {$email}");
+            
+            // Отправляем событие о создании токена верификации
+            $this->emailEventPublisher->publishEmailVerificationRequested($user, $token);
+            
+            return $token;
+
+        } catch (\Exception $e) {
+            $this->logger->serviceError("Ошибка создания токена верификации: " . $e->getMessage());
+            return null;
         }
-
-        if ($this->isTokenExpired($verification)) {
-            return false; // Токен истёк
-        }
-
-        if ($verification->verified_at) {
-            return true; // Уже подтверждено
-        }
-
-        $verification->verified_at = now();
-        $verification->save();
-
-        // Обновляем пользователя
-        $user = $verification->user;
-        if ($user) {
-            $user->email_verified_at = now();
-            $user->save();
-        }
-
-        // Чистим другие незавершенные токены для этого email
-        EmailVerification::where('user_id', $verification->user_id)
-            ->where('email', $verification->email)
-            ->whereNull('verified_at')
-            ->where('id', '!=', $verification->id)
-            ->delete();
-
-        return true;
     }
 
     /**
-     * Повторная отправка письма подтверждения
+     * Проверка токена верификации
      */
-    public function resend(User $user): EmailVerification
+    public function verifyToken(string $token): ?EmailVerification
     {
-        if ($user->email_verified_at) {
-            throw new \RuntimeException('Email уже подтвержден');
+        try {
+            $verification = EmailVerification::where('token', $token)
+                ->where('expires_at', '>', Carbon::now())
+                ->first();
+
+            if ($verification) {
+                $this->logger->serviceInfo("Токен верификации найден: {$token}");
+            } else {
+                $this->logger->serviceWarning("Токен верификации не найден или истек: {$token}");
+            }
+
+            return $verification;
+
+        } catch (\Exception $e) {
+            $this->logger->serviceError("Ошибка проверки токена: " . $e->getMessage());
+            return null;
         }
-
-        return $this->sendVerificationEmail($user, $user->email);
     }
 
     /**
-     * Очистка истекших токенов
+     * Подтверждение email пользователя
      */
-    public function cleanupExpiredTokens(): int
+    public function confirmEmail(string $token): bool
     {
-        return EmailVerification::whereNull('verified_at')
-            ->where('expires_at', '<', now())
-            ->delete();
+        try {
+            $verification = $this->verifyToken($token);
+            
+            if (!$verification) {
+                return false;
+            }
+
+            // Отмечаем токен как использованный
+            $verification->update([
+                'verified_at' => Carbon::now()
+            ]);
+
+            // Обновляем поле email_verified_at через UserService
+            $user = User::find($verification->user_id);
+            if ($user) {
+                $updatedUser = $this->userService->verifyEmail($user);
+                
+                if ($updatedUser) {
+                    $this->logger->serviceInfo("Email подтвержден для пользователя {$verification->user_id} через UserService");
+                    
+                    // Отправляем событие о подтверждении email
+                    $this->emailEventPublisher->publishEmailVerificationCompleted($updatedUser, $verification);
+                } else {
+                    $this->logger->serviceError("Ошибка обновления email_verified_at через UserService для пользователя {$verification->user_id}");
+                }
+            } else {
+                $this->logger->serviceError("Пользователь не найден для обновления email_verified_at: {$verification->user_id}");
+            }
+            
+            return true;
+
+        } catch (\Exception $e) {
+            $this->logger->serviceError("Ошибка подтверждения email: " . $e->getMessage());
+            return false;
+        }
     }
 
     /**
-     * Проверка истечения токена
+     * Проверка, верифицирован ли email пользователя
      */
-    public function isTokenExpired(EmailVerification $verification): bool
+    public function isEmailVerified(User $user, string $email): bool
     {
-        return $verification->expires_at->isPast();
+        try {
+            // Проверяем поле email_verified_at в таблице пользователей
+            if ($user->email_verified_at) {
+                return true;
+            }
+
+            // Дополнительная проверка через таблицу верификации (для совместимости)
+            $verified = EmailVerification::where('user_id', $user->id)
+                ->where('email', $email)
+                ->whereNotNull('verified_at')
+                ->exists();
+
+            return $verified;
+
+        } catch (\Exception $e) {
+            $this->logger->serviceError("Ошибка проверки верификации email: " . $e->getMessage());
+            return false;
+        }
     }
 
     /**
-     * Генерация 64-символьного URL-safe токена (Base64)
+     * Получение активного токена верификации для пользователя
      */
-    private function generateToken64UrlSafe(): string
+    public function getActiveToken(User $user, string $email): ?EmailVerification
     {
-        // 48 байт -> base64 = 64 символа без '='; заменяем +/ на -_
-        $bytes = random_bytes(48);
-        return strtr(base64_encode($bytes), ['+' => '-', '/' => '_']);
+        try {
+            return EmailVerification::where('user_id', $user->id)
+                ->where('email', $email)
+                ->where('expires_at', '>', Carbon::now())
+                ->whereNull('verified_at')
+                ->first();
+
+        } catch (\Exception $e) {
+            $this->logger->serviceError("Ошибка получения активного токена: " . $e->getMessage());
+            return null;
+        }
     }
 
     /**
-     * Сборка ссылки подтверждения
+     * Удаление истекших токенов для пользователя
      */
-    // Ссылка не используется в режиме token-only
+    public function cleanupExpiredTokens(User $user): int
+    {
+        try {
+            $deletedCount = EmailVerification::where('user_id', $user->id)
+                ->where('expires_at', '<', Carbon::now())
+                ->delete();
+
+            if ($deletedCount > 0) {
+                $this->logger->serviceInfo("Удалено истекших токенов для пользователя {$user->id}: {$deletedCount}");
+            }
+
+            return $deletedCount;
+
+        } catch (\Exception $e) {
+            $this->logger->serviceError("Ошибка очистки токенов: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Удаление всех токенов для пользователя
+     */
+    public function revokeAllTokens(User $user): bool
+    {
+        try {
+            $deletedCount = EmailVerification::where('user_id', $user->id)->delete();
+            
+            $this->logger->serviceInfo("Удалено токенов для пользователя {$user->id}: {$deletedCount}");
+            return true;
+
+        } catch (\Exception $e) {
+            $this->logger->serviceError("Ошибка удаления токенов: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Проверка валидности токена (не истек)
+     */
+    public function isTokenValid(EmailVerification $token): bool
+    {
+        return $token->expires_at && $token->expires_at->isFuture();
+    }
+
+    /**
+     * Получение токена по ID
+     */
+    public function findTokenById(int $id): ?EmailVerification
+    {
+        try {
+            return EmailVerification::find($id);
+        } catch (\Exception $e) {
+            $this->logger->serviceError("Ошибка поиска токена по ID: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Обновление токена
+     */
+    public function updateToken(EmailVerification $token, array $data): ?EmailVerification
+    {
+        try {
+            $token->update($data);
+            $this->logger->serviceInfo("Токен обновлен: {$token->id}");
+            return $token;
+        } catch (\Exception $e) {
+            $this->logger->serviceError("Ошибка обновления токена: " . $e->getMessage());
+            return null;
+        }
+    }
 }
-
-

@@ -2,170 +2,169 @@
 
 namespace App\Services;
 
-use App\Contracts\UserServiceInterface;
-use Illuminate\Support\Facades\Log;
-use App\Contracts\UserRepositoryInterface;
-use App\Models\User; // Добавил импорт User для строгой типизации
+use App\Contracts\Services\UserServiceInterface;
+use App\Contracts\Services\CustomLoggerInterface;
+use App\Contracts\Repositories\UserRepositoryInterface;
+use App\DTOs\UserDTO;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 
 class UserService implements UserServiceInterface
 {
-    public function __construct(private UserRepositoryInterface $userRepository)
-    {
-    }
+    public function __construct(
+        private CustomLoggerInterface $logger,
+        private UserRepositoryInterface $userRepository,
+    ) {}
 
-    // Создание нового пользователя
+    /**
+     * Создание нового пользователя
+     */
     public function createUser(array $data): ?User
     {
         try {
+            // Пароль будет автоматически хеширован кастом 'hashed' в модели User
             return $this->userRepository->create($data);
-        } catch (\Throwable $e) {
-            // Логируем ошибку создания пользователя
-            Log::error('Ошибка создания пользователя', [
-                'error' => $e->getMessage(),
-                'data' => $data,
-            ]);
+        } catch (\Exception $e) {
+            $this->logger->serviceError('Ошибка при создании пользователя: ' . $e->getMessage());
             return null;
         }
     }
 
-    // Поиск пользователя по ID
-    public function findUser(int $id): ?User
-    {
-        try {
-            return $this->userRepository->findById($id);
-        } catch (\Throwable $e) {
-            // Логируем ошибку поиска по ID
-            Log::error('Ошибка поиска пользователя по ID', [
-                'error' => $e->getMessage(),
-                'id' => $id,
-            ]);
-            return null;
-        }
-    }
-
-    // Поиск пользователя по email
-    public function findUserByEmail(string $email): ?User
-    {
-        try {
-            return $this->userRepository->findByEmail($email);
-        } catch (\Throwable $e) {
-            // Логируем ошибку поиска по email
-            Log::error('Ошибка поиска пользователя по email', [
-                'error' => $e->getMessage(),
-                'email' => $email,
-            ]);
-            return null;
-        }
-    }
-
-    // Обновление пользователя
+    /**
+     * Обновление данных пользователя
+     */
     public function updateUser(User $user, array $data): ?User
     {
         try {
             return $this->userRepository->update($user, $data);
-        } catch (\Throwable $e) {
-            // Логируем ошибку обновления пользователя
-            Log::error('Ошибка обновления пользователя', [
-                'error' => $e->getMessage(),
-                'user' => $user,
-            ]);
+        } catch (\Exception $e) {
+            $this->logger->serviceError('Ошибка при обновлении пользователя: ' . $e->getMessage());
             return null;
         }
     }
 
-    // Удаление пользователя
+    /**
+     * Удаление пользователя
+     */
     public function deleteUser(User $user): bool
     {
         try {
             return $this->userRepository->delete($user);
-        } catch (\Throwable $e) {
-            // Логируем ошибку удаления пользователя
-            Log::error('Ошибка удаления пользователя', [
-                'error' => $e->getMessage(),
-                'user' => $user,
-            ]);
+        } catch (\Exception $e) {
+            $this->logger->serviceError('Ошибка при удалении пользователя: ' . $e->getMessage());
             return false;
         }
     }
 
-    // Активация пользователя
+    /**
+     * Удаление пользователя по ID
+     */
+    public function deleteUserById(int $id): bool
+    {
+        try {
+            return $this->userRepository->deleteById($id);
+        } catch (\Exception $e) {
+            $this->logger->serviceError('Ошибка при удалении пользователя по ID: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Активация пользователя
+     */
     public function activateUser(User $user): ?User
     {
         try {
-            return $this->userRepository->activate($user);
-        } catch (\Throwable $e) {
-            // Логируем ошибку активации пользователя
-            Log::error('Ошибка активации пользователя', [
-                'error' => $e->getMessage(),
-                'user' => $user,
-            ]);
+            // Обновляем статус is_active
+            return $this->userRepository->update($user, ['is_active' => true]);
+        } catch (\Exception $e) {
+            $this->logger->serviceError('Ошибка при активации пользователя: ' . $e->getMessage());
             return null;
         }
     }
 
-    // Деактивация пользователя
+    /**
+     * Деактивация пользователя
+     */
     public function deactivateUser(User $user): ?User
     {
         try {
-            return $this->userRepository->deactivate($user);
-        } catch (\Throwable $e) {
-            // Логируем ошибку деактивации пользователя
-            Log::error('Ошибка деактивации пользователя', [
-                'error' => $e->getMessage(),
-                'user' => $user,
-            ]);
+            // Обновляем статус is_active
+            return $this->userRepository->update($user, ['is_active' => false]);
+        } catch (\Exception $e) {
+            $this->logger->serviceError('Ошибка при деактивации пользователя: ' . $e->getMessage());
             return null;
         }
     }
 
-    // Обновление времени последнего входа
-    public function updateLastLogin(User $user): ?User
+    /**
+     * Поиск пользователя по email
+     */
+    public function findUserByEmail(string $email): ?UserDTO
     {
         try {
-            return $this->userRepository->updateLastLogin($user);
-        } catch (\Throwable $e) {
-            // Логируем ошибку обновления времени последнего входа
-            Log::error('Ошибка обновления времени последнего входа', [
-                'error' => $e->getMessage(),
-                'user' => $user,
-            ]);
+            $user = $this->userRepository->findByEmail($email);
+            return $user ? UserDTO::fromModel($user) : null;
+        } catch (\Exception $e) {
+            $this->logger->serviceError('Ошибка при поиске пользователя по email: ' . $e->getMessage());
             return null;
         }
     }
 
-    // Проверка активности пользователя
-    public function isUserActive(User $user): bool
+
+    /**
+     * Проверка пароля пользователя
+     */
+    public function checkPassword(User $user, string $password): bool
     {
         try {
-            return (bool) $user->is_active;
-        } catch (\Throwable $e) {
-            // Логируем ошибку проверки активности пользователя
-            Log::error('Ошибка проверки активности пользователя', [
-                'error' => $e->getMessage(),
-                'user' => $user,
-            ]);
+            $hashedPassword = $user->getRawOriginal('password');
+            return Hash::check($password, $hashedPassword);
+        } catch (\Exception $e) {
+            $this->logger->serviceError('Ошибка при проверке пароля: ' . $e->getMessage());
             return false;
         }
     }
 
-    // Получение текущего аутентифицированного пользователя
-    public function getCurrentUser(): ?User
+    /**
+     * Проверка активности пользователя
+     */
+    public function isUserActive(User $user): bool
+    {
+        // Проверяем флаг активности
+        return (bool) $user->is_active;
+    }
+
+    /**
+     * Обновление времени последнего входа пользователя
+     */
+    public function updateLastLogin(User $user): ?User
     {
         try {
-            // Сначала пробуем получить через стандартный auth
-            $user = auth()->user();
+            // Обновляем поле last_login_at
+            return $this->userRepository->update($user, ['last_login_at' => now()]);
+        } catch (\Exception $e) {
+            $this->logger->serviceError('Ошибка при обновлении времени последнего входа: ' . $e->getMessage());
+            return null;
+        }
+    }
 
-            // Если не получилось, пробуем через request (для кастомного middleware)
-            if (!$user && request()->user()) {
-                $user = request()->user();
+    /**
+     * Верификация email пользователя
+     */
+    public function verifyEmail(User $user): ?User
+    {
+        try {
+            // Обновляем поле email_verified_at
+            $updatedUser = $this->userRepository->update($user, ['email_verified_at' => now()]);
+            
+            if ($updatedUser) {
+                $this->logger->serviceInfo("Email подтвержден для пользователя {$user->id}");
             }
-
-            return $user;
-        } catch (\Throwable $e) {
-            // Логируем ошибку получения текущего пользователя
-            Log::error('Ошибка получения текущего пользователя', [
-                'error' => $e->getMessage(),
-            ]);
+            
+            return $updatedUser;
+        } catch (\Exception $e) {
+            $this->logger->serviceError('Ошибка при верификации email: ' . $e->getMessage());
             return null;
         }
     }

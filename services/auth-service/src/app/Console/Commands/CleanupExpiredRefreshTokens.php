@@ -2,25 +2,34 @@
 
 namespace App\Console\Commands;
 
-use App\Contracts\RefreshTokenServiceInterface;
 use Illuminate\Console\Command;
+use App\Models\RefreshToken;
+use Illuminate\Support\Facades\Log;
 
+/**
+ * Команда для очистки истекших refresh токенов
+ */
 class CleanupExpiredRefreshTokens extends Command
 {
-    protected $signature = 'refresh:cleanup-expired';
-    protected $description = 'Удалить истекшие refresh токены';
-
-    public function __construct(private RefreshTokenServiceInterface $service)
-    {
-        parent::__construct();
-    }
+    protected $signature = 'tokens:cleanup-refresh';
+    protected $description = 'Очистка истекших refresh токенов';
 
     public function handle(): int
     {
-        $deleted = $this->service->cleanExpiredTokens();
-        $this->info("Удалено истекших refresh токенов: {$deleted}");
-        return self::SUCCESS;
+        $this->info('Начинаем очистку истекших refresh токенов...');
+        
+        try {
+            // Удаляем токены, которые истекли
+            $deletedCount = RefreshToken::where('expires_at', '<', now())->delete();
+            
+            $this->info("Удалено истекших refresh токенов: {$deletedCount}");
+            Log::info("Очистка refresh токенов завершена. Удалено: {$deletedCount}");
+            
+            return 0;
+        } catch (\Exception $e) {
+            $this->error("Ошибка при очистке refresh токенов: " . $e->getMessage());
+            Log::error("Ошибка очистки refresh токенов: " . $e->getMessage());
+            return 1;
+        }
     }
 }
-
-

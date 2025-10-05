@@ -4,87 +4,87 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use App\Contracts\JwtServiceInterface;
-use App\Contracts\BlacklistServiceInterface;
+use Symfony\Component\HttpFoundation\Response;
+use Tymon\JWTAuth\Facades\JWTAuth;
+use Tymon\JWTAuth\Exceptions\JWTException;
+use Tymon\JWTAuth\Exceptions\TokenExpiredException;
+use Tymon\JWTAuth\Exceptions\TokenInvalidException;
+use Tymon\JWTAuth\Exceptions\TokenBlacklistedException;
 use Illuminate\Support\Facades\Log;
+use App\Models\User;
 
 class JwtAuthMiddleware
 {
-    public function __construct(
-        protected JwtServiceInterface $jwtService,
-        protected BlacklistServiceInterface $blacklistService
-    ) {
-    }
-
     /**
-     * Handle an incoming request.
+     * Обработка входящего запроса с проверкой JWT токена
+     *
+     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next)
+    public function handle(Request $request, Closure $next): Response
     {
         try {
             // Получаем токен из заголовка Authorization
-            $token = $this->extractTokenFromRequest($request);
+            $token = $this->extractToken($request);
             
             if (!$token) {
-                return response()->json([
-                    'error' => 'Token not provided',
-                    'message' => 'Authorization token is required'
-                ], 401);
+                return $this->unauthorizedResponse('Токен не предоставлен', 'TOKEN_MISSING');
             }
 
-            // Проверяем, не находится ли токен в blacklist
-            if ($this->blacklistService->isBlacklisted($token)) {
-                return response()->json([
-                    'error' => 'Token revoked',
-                    'message' => 'Token has been revoked'
-                ], 401);
-            }
-
-            // Валидируем токен
-            $payload = $this->jwtService->validateToken($token);
-            if (!$payload) {
-                return response()->json([
-                    'error' => 'Invalid token',
-                    'message' => 'Token is invalid or expired'
-                ], 401);
-            }
-
-            // Получаем пользователя из токена
-            $user = $this->jwtService->getUserFromToken($token);
+            // Проверяем и парсим токен
+            $user = JWTAuth::parseToken()->authenticate();
+            
             if (!$user) {
-                return response()->json([
-                    'error' => 'User not found',
-                    'message' => 'User associated with token not found'
-                ], 401);
+                return $this->unauthorizedResponse('Пользователь не найден', 'USER_NOT_FOUND');
             }
 
-            // Устанавливаем пользователя в request для дальнейшего использования
+            // Проверяем активность пользователя
+            if (!$user->is_active) {
+                return $this->unauthorizedResponse('Пользователь деактивирован', 'USER_INACTIVE');
+            }
+
+            // Добавляем пользователя в запрос для дальнейшего использования
             $request->setUserResolver(function () use ($user) {
                 return $user;
             });
 
-            // Добавляем токен в request
-            $request->merge(['jwt_token' => $token]);
+            // Логируем успешную аутентификацию
+            Log::info('JWT аутентификация успешна', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'ip' => $request->ip()
+            ]);
 
             return $next($request);
 
-        } catch (\Throwable $e) {
-            Log::error('JWT Middleware error', [
+        } catch (TokenExpiredException $e) {
+            Log::warning('JWT токен истек', ['error' => $e->getMessage()]);
+            return $this->unauthorizedResponse('Токен истек', 'TOKEN_EXPIRED');
+            
+        } catch (TokenInvalidException $e) {
+            Log::warning('JWT токен недействителен', ['error' => $e->getMessage()]);
+            return $this->unauthorizedResponse('Токен недействителен', 'TOKEN_INVALID');
+            
+        } catch (TokenBlacklistedException $e) {
+            Log::warning('JWT токен в blacklist', ['error' => $e->getMessage()]);
+            return $this->unauthorizedResponse('Токен отозван', 'TOKEN_BLACKLISTED');
+            
+        } catch (JWTException $e) {
+            Log::error('JWT ошибка', ['error' => $e->getMessage()]);
+            return $this->unauthorizedResponse('Ошибка аутентификации', 'JWT_ERROR');
+            
+        } catch (\Exception $e) {
+            Log::error('Неожиданная ошибка в JWT middleware', [
                 'error' => $e->getMessage(),
-                'request' => $request->url()
+                'trace' => $e->getTraceAsString()
             ]);
-
-            return response()->json([
-                'error' => 'Authentication failed',
-                'message' => 'An error occurred during authentication'
-            ], 401);
+            return $this->serverErrorResponse('Внутренняя ошибка сервера');
         }
     }
 
     /**
-     * Извлекает JWT токен из запроса
+     * Извлечение токена из заголовка Authorization
      */
-    private function extractTokenFromRequest(Request $request): ?string
+    private function extractToken(Request $request): ?string
     {
         $header = $request->header('Authorization');
         
@@ -98,5 +98,29 @@ class JwtAuthMiddleware
         }
 
         return null;
+    }
+
+    /**
+     * Ответ с ошибкой 401 Unauthorized
+     */
+    private function unauthorizedResponse(string $message, string $errorCode = 'UNAUTHORIZED'): Response
+    {
+        return response()->json([
+            'success' => false,
+            'message' => $message,
+            'error_code' => $errorCode
+        ], 401);
+    }
+
+    /**
+     * Ответ с ошибкой 500 Internal Server Error
+     */
+    private function serverErrorResponse(string $message): Response
+    {
+        return response()->json([
+            'success' => false,
+            'message' => $message,
+            'error_code' => 'INTERNAL_ERROR'
+        ], 500);
     }
 }
