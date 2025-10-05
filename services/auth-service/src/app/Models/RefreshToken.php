@@ -28,4 +28,18 @@ class RefreshToken extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    // Проверка валидности токена
+    public function isValid(): bool
+    {
+        return $this->expires_at && $this->expires_at->isFuture();
+    }
+
+    // Статический метод для поиска валидного токена
+    public static function findValidToken(string $refreshToken): ?self
+    {
+        return static::where('refresh_token', $refreshToken)
+            ->where('expires_at', '>', now())
+            ->first();
+    }
 }

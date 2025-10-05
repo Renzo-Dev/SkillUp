@@ -3,25 +3,25 @@
 namespace App\Contracts\Repositories;
 
 use App\Models\User;
-use App\Models\UserRefreshToken;
+use App\Models\RefreshToken;
 use Illuminate\Database\Eloquent\Collection;
 
 interface RefreshTokenRepositoryInterface
 {
     // Создание refresh токена
-    public function create(array $data): ?UserRefreshToken;
+    public function create(array $data): ?RefreshToken;
     
     // Поиск валидного токена по строке
-    public function findValidToken(string $refreshToken): ?UserRefreshToken;
+    public function findValidToken(string $refreshToken): ?RefreshToken;
     
     // Поиск токена по строке (без проверки валидности)
-    public function findByToken(string $refreshToken): ?UserRefreshToken;
+    public function findByToken(string $refreshToken): ?RefreshToken;
     
     // Обновление токена
-    public function update(UserRefreshToken $token, array $data): ?UserRefreshToken;
+    public function update(RefreshToken $token, array $data): ?RefreshToken;
     
     // Удаление токена
-    public function delete(UserRefreshToken $token): bool;
+    public function delete(RefreshToken $token): bool;
     
     // Получение всех активных токенов пользователя
     public function getUserActiveTokens(User $user): Collection;
