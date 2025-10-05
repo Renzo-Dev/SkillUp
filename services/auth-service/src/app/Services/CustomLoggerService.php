@@ -42,6 +42,22 @@ class CustomLoggerService implements CustomLoggerInterface
     }
 
     /**
+     * Логирование информации сервиса
+     */
+    public function serviceInfo(string $message, array $context = []): void
+    {
+        Log::info($message, $context);
+    }
+
+    /**
+     * Логирование информации контроллера
+     */
+    public function controllerInfo(string $message, array $context = []): void
+    {
+        Log::info($message, $context);
+    }
+
+    /**
      * Логирование ошибки репозитория
      */
     public function repositoryError(string $message, array $context = []): void

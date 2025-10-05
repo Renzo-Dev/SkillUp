@@ -24,11 +24,18 @@ class ConsumeUserEvents extends Command
     {
         $this->info('Запуск consumer для событий пользователей...');
 
-        $this->rabbitMQ->consume('user.events', function ($data) {
-            $this->handleUserEvent($data);
-        });
+        try {
+            // Пытаемся запустить consumer
+            $this->rabbitMQ->consume('user.events', function ($data) {
+                $this->handleUserEvent($data);
+            });
 
-        return 0;
+            return 0;
+        } catch (\Exception $e) {
+            $this->error("Ошибка при запуске consumer: " . $e->getMessage());
+            Log::error("Ошибка consumer: " . $e->getMessage());
+            return 1;
+        }
     }
 
     /**

@@ -34,8 +34,26 @@ class AuthController extends Controller implements AuthControllerInterface
     public function login(LoginRequest $request): JsonResponse
     {
         try {
-
-   
+            // Создаем DTO из валидированного запроса
+            $dto = LoginRequestDTO::fromRequest($request);
+            
+            // Аутентифицируем пользователя
+            $response = $this->authService->login($dto);
+            
+            if (!$response) {
+                return ApiErrorResource::create(
+                    'Неверные учетные данные',
+                    401
+                )->response();
+            }
+            
+            // Возвращаем успешный ответ
+            return response()->json([
+                'success' => true,
+                'message' => 'Вход выполнен успешно',
+                'data' => $response->toArray()
+            ], 200);
+            
         } catch (\Exception $e) {
             // Логируем ошибку
             $this->logger->controllerError($e->getMessage());
@@ -77,8 +95,80 @@ class AuthController extends Controller implements AuthControllerInterface
      */
     public function logout(): JsonResponse
     {
-        // TODO: Реализовать логику выхода
-        return response()->json(['message' => 'Logout method not implemented yet']);
+        try {
+            // Получаем токен из заголовка
+            $token = $this->extractTokenFromRequest();
+            
+            if (!$token) {
+                return ApiErrorResource::create(
+                    'Токен не предоставлен',
+                    401
+                )->response();
+            }
+            
+            // Выходим из системы
+            $success = $this->authService->logout($token);
+            
+            if (!$success) {
+                return ApiErrorResource::create(
+                    'Ошибка при выходе из системы',
+                    500
+                )->response();
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Выход выполнен успешно'
+            ], 200);
+            
+        } catch (\Exception $e) {
+            $this->logger->controllerError($e->getMessage());
+            return ApiErrorResource::create(
+                'Ошибка при выходе: ' . $e->getMessage(),
+                500
+            )->response();
+        }
+    }
+
+    /**
+     * Обновление токена
+     */
+    public function refresh(): JsonResponse
+    {
+        try {
+            // Получаем refresh токен из запроса
+            $refreshToken = request()->input('refresh_token');
+            
+            if (!$refreshToken) {
+                return ApiErrorResource::create(
+                    'Refresh токен не предоставлен',
+                    400
+                )->response();
+            }
+            
+            // Обновляем токен
+            $response = $this->authService->refreshToken($refreshToken);
+            
+            if (!$response) {
+                return ApiErrorResource::create(
+                    'Недействительный refresh токен',
+                    401
+                )->response();
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Токен обновлен успешно',
+                'data' => $response->toArray()
+            ], 200);
+            
+        } catch (\Exception $e) {
+            $this->logger->controllerError($e->getMessage());
+            return ApiErrorResource::create(
+                'Ошибка при обновлении токена: ' . $e->getMessage(),
+                500
+            )->response();
+        }
     }
 
     /**
@@ -86,7 +176,39 @@ class AuthController extends Controller implements AuthControllerInterface
      */
     public function me(): JsonResponse
     {
-        // TODO: Реализовать логику получения данных пользователя
-        return response()->json(['message' => 'Me method not implemented yet']);
+        try {
+            // Получаем информацию о текущем пользователе
+            $response = $this->authService->me();
+            // Возвращаем ответ
+            return response()->json($response);
+        } catch (\Exception $e) {
+            // Логируем ошибку
+            $this->logger->controllerError($e->getMessage());
+            // Возвращаем ошибку
+            return ApiErrorResource::create(
+                'Ошибка получения информации о текущем пользователе: ' . $e->getMessage(),
+                401
+            )->response();
+        }
     }
+
+    /**
+     * Извлечение токена из заголовка Authorization
+     */
+    private function extractTokenFromRequest(): ?string
+    {
+        $authorization = request()->header('Authorization');
+        
+        if (!$authorization) {
+            return null;
+        }
+        
+        // Проверяем формат "Bearer {token}"
+        if (preg_match('/Bearer\s+(.*)$/i', $authorization, $matches)) {
+            return $matches[1];
+        }
+        
+        return null;
+    }
+
 }

@@ -22,8 +22,7 @@ class UserService implements UserServiceInterface
     public function createUser(array $data): ?User
     {
         try {
-            // Хешируем пароль перед созданием пользователя
-            $data['password'] = Hash::make($data['password']);
+            // Пароль будет автоматически хеширован кастом 'hashed' в модели User
             return $this->userRepository->create($data);
         } catch (\Exception $e) {
             $this->logger->serviceError('Ошибка при создании пользователя: ' . $e->getMessage());
@@ -105,12 +104,13 @@ class UserService implements UserServiceInterface
     {
         try {
             $user = $this->userRepository->findByEmail($email);
-            return $user ? new UserDTO($user) : null;
+            return $user ? UserDTO::fromModel($user) : null;
         } catch (\Exception $e) {
             $this->logger->serviceError('Ошибка при поиске пользователя по email: ' . $e->getMessage());
             return null;
         }
     }
+
 
     /**
      * Проверка пароля пользователя
@@ -118,8 +118,8 @@ class UserService implements UserServiceInterface
     public function checkPassword(User $user, string $password): bool
     {
         try {
-            // Проверяем пароль через Hash
-            return Hash::check($password, $user->password);
+            $hashedPassword = $user->getRawOriginal('password');
+            return Hash::check($password, $hashedPassword);
         } catch (\Exception $e) {
             $this->logger->serviceError('Ошибка при проверке пароля: ' . $e->getMessage());
             return false;
@@ -145,6 +145,26 @@ class UserService implements UserServiceInterface
             return $this->userRepository->update($user, ['last_login_at' => now()]);
         } catch (\Exception $e) {
             $this->logger->serviceError('Ошибка при обновлении времени последнего входа: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Верификация email пользователя
+     */
+    public function verifyEmail(User $user): ?User
+    {
+        try {
+            // Обновляем поле email_verified_at
+            $updatedUser = $this->userRepository->update($user, ['email_verified_at' => now()]);
+            
+            if ($updatedUser) {
+                $this->logger->serviceInfo("Email подтвержден для пользователя {$user->id}");
+            }
+            
+            return $updatedUser;
+        } catch (\Exception $e) {
+            $this->logger->serviceError('Ошибка при верификации email: ' . $e->getMessage());
             return null;
         }
     }

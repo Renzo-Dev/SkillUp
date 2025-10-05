@@ -17,4 +17,5 @@ interface UserServiceInterface
     public function checkPassword(User $user, string $password): bool;
     public function isUserActive(User $user): bool;
     public function updateLastLogin(User $user): ?User;
+    public function verifyEmail(User $user): ?User;
 }

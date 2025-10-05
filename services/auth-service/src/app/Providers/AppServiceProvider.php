@@ -23,6 +23,8 @@ use App\Services\TokenService;
 use App\Contracts\TokenInterface;
 use App\Contracts\Services\RabbitMQServiceInterface;
 use App\Services\RabbitMQService;
+use App\Contracts\Services\EmailVerificationServiceInterface;
+use App\Services\EmailVerificationService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -42,6 +44,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(TokenServiceInterface::class, TokenService::class);
         $this->app->bind(TokenInterface::class, JwtService::class);
         $this->app->bind(RabbitMQServiceInterface::class, RabbitMQService::class);
+        $this->app->bind(EmailVerificationServiceInterface::class, EmailVerificationService::class);
     }
 
     /**
