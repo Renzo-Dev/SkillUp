@@ -12,7 +12,6 @@
 - Поддержка верификации email и событийной шины.
 - Подготовка документации и тестов (unit + feature).
 
-## 3. Функциональные требования
 - Регистрация: валидация, создание пользователя, генерация пары токенов, публикация `user.registered`.
 - Аутентификация: проверка пароля, активности пользователя, генерация новой токен-пары, публикация `user.logged_in`.
 - Refresh токен: выдача новой пары по refresh, отзыв старого refresh токена.
@@ -21,16 +20,16 @@
 - Email-верификация: выпуск токена, подтверждение, повторная отправка, публикация событий `email.*`.
 - Управление активностью пользователя: поддержка `is_active`, ошибки при попытке логина неактивного пользователя.
 - API ошибок — единый JSON-формат, коды 4xx/5xx.
+- Внутренний эндпоинт `GET /internal/jwt/validate`: принимает JWT из заголовка Authorization, валидирует подпись, TTL, blacklist, читает метаданные пользователя (scopes, subscription-tier) из Redis и возвращает 204 + заголовки `X-User-Id`, `X-Scopes`, `X-Subscription-Tier`. Ошибки 401/403 в формате JSON. *(коммент: добавляю требование к internal endpoint)*
+- Очистка Redis-кеша при revoke/logout/expiry — обязательна.
 
-## 4. Нефункциональные требования
-- Производительность: ответы API ≤ 200мс при p95 (без внешних зависимостей).
+- Производительность: ответы API ≤ 200мс при p95 (без внешних зависимостей). Internal endpoint должен отвечать ≤ 50мс p95 (за счёт Redis). *(коммент: уточнение SLA)*
 - Масштабируемость: stateless-сервис, все состояния в БД/Redis.
 - Надёжность: транзакционный персистентный слой, повторная отправка событий при ошибках RabbitMQ (ретраи на инфраструктуре).
-- Безопасность: хешированные пароли, TLS на уровне API gateway, rate limiting (throttle), защита JWT blacklist.
+- Безопасность: хешированные пароли, TLS на уровне API gateway, rate limiting (throttle), защита JWT blacklist, mTLS или IP whitelist для internal маршрутов.
 - Логирование: использовать `CustomLoggerService`, события RabbitMQ логировать уровнями info/warning/error.
 - Локализация: сообщения об ошибках на русском, хранение в ресурсах/константах.
 
-## 5. API-эндпоинты
 - `POST /api/auth/register`
   - Вход: `name`, `email`, `password`, `password_confirmation`.
   - Выход: `user`, `access_token`, `refresh_token`, статус email.
@@ -51,6 +50,7 @@
 - `GET /api/auth/verification-status`
   - Вход: `email`.
 - `GET /api/health`, `GET /api/status` — эксплуатация.
+- `GET /internal/jwt/validate` — внутренний маршрут для gateway (rate limit по IP, авторизация сервисных ключей).
 
 ## 6. События и интеграции
 - Публикация через RabbitMQ (`user.events`, `email.verification`).
@@ -65,11 +65,12 @@
 - Требуется ensure целостности (cascade delete).
 - TTL для refresh/verification контролируется через конфиг (`config/jwt.php`, env).
 
-## 8. Конфигурация окружения (.env)
 - `APP_ENV`, `APP_DEBUG`, `APP_URL`, `FRONTEND_URL`.
 - `DB_CONNECTION=pgsql`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`.
 - `CACHE_DRIVER=redis`, `QUEUE_CONNECTION=redis`, `REDIS_HOST`, `REDIS_PASSWORD`.
 - `JWT_SECRET`, `JWT_TTL`, `JWT_REFRESH_TTL`, `JWT_BLACKLIST_ENABLED=true`.
+- `JWT_CACHE_PREFIX`, `JWT_CACHE_TTL` — параметры хранения метаданных в Redis. *(коммент: добавляю env)*
+- `INTERNAL_JWT_VALIDATE_KEY` — ключ/секрет для вызовов gateway (если используется подпись запросов).
 - `RABBITMQ_HOST`, `RABBITMQ_PORT`, `RABBITMQ_USER`, `RABBITMQ_PASSWORD`, `RABBITMQ_VHOST`.
 - Ключи почтового сервиса — если требуется прямое подключение (сейчас не используется).
 

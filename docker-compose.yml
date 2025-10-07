@@ -32,6 +32,40 @@ services:
       - rabbitmq
       - redis
 
+  ai-service:
+    build:
+      context: ./services/ai-service
+      dockerfile: Dockerfile
+    container_name: ai-service
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./services/ai-service/src:/var/www/html
+      - ./services/ai-service/supervisord.conf:/etc/supervisor/conf.d/supervisord.conf
+    environment:
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=${DB_DATABASE}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=${RABBITMQ_USER}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - APP_SERVICE_AUTH_URL=http://auth-service
+    expose:
+      - '9001'
+    networks:
+      - skillup-network
+    depends_on:
+      - postgres
+      - redis
+
+
   # frontend:
   #   build:
   #     context: ./frontend
