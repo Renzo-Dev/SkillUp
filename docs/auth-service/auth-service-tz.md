@@ -50,7 +50,7 @@
 - `GET /api/auth/verification-status`
   - Вход: `email`.
 - `GET /api/health`, `GET /api/status` — эксплуатация.
-- `GET /internal/jwt/validate` — внутренний маршрут для gateway (rate limit по IP, авторизация сервисных ключей).
+- `GET /internal/jwt/validate` — внутренний маршрут для gateway (rate limit по IP, авторизация сервисных ключей, заголовки `X-User-Id`, `X-Scopes`, `X-Subscription-Tier`, `X-Email-Verified`).
 
 ## 6. События и интеграции
 - Публикация через RabbitMQ (`user.events`, `email.verification`).
@@ -69,7 +69,7 @@
 - `DB_CONNECTION=pgsql`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`.
 - `CACHE_DRIVER=redis`, `QUEUE_CONNECTION=redis`, `REDIS_HOST`, `REDIS_PASSWORD`.
 - `JWT_SECRET`, `JWT_TTL`, `JWT_REFRESH_TTL`, `JWT_BLACKLIST_ENABLED=true`.
-- `JWT_CACHE_PREFIX`, `JWT_CACHE_TTL` — параметры хранения метаданных в Redis. *(коммент: добавляю env)*
+- `JWT_CACHE_STORE`, `JWT_CACHE_PREFIX`, `JWT_CACHE_TTL`, `JWT_CACHE_MIN_TTL` — параметры хранения метаданных в Redis. *(коммент: добавляю env)*
 - `INTERNAL_JWT_VALIDATE_KEY` — ключ/секрет для вызовов gateway (если используется подпись запросов).
 - `RABBITMQ_HOST`, `RABBITMQ_PORT`, `RABBITMQ_USER`, `RABBITMQ_PASSWORD`, `RABBITMQ_VHOST`.
 - Ключи почтового сервиса — если требуется прямое подключение (сейчас не используется).

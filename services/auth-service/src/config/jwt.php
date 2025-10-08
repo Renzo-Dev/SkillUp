@@ -122,6 +122,10 @@ return [
 
     'refresh_ttl' => (int) env('JWT_REFRESH_TTL', 20160),
 
+    'cache_store' => env('JWT_CACHE_STORE', 'redis'),
+    'cache_prefix' => env('JWT_CACHE_PREFIX', 'auth:jwt'),
+    'cache_min_ttl' => env('JWT_CACHE_MIN_TTL', 5),
+
     /*
     |--------------------------------------------------------------------------
     | JWT hashing algorithm

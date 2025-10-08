@@ -65,26 +65,6 @@ services:
       - postgres
       - redis
 
-
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #   container_name: frontend
-  #   restart: unless-stopped
-  #   working_dir: /app
-  #   volumes:
-  #     - ./frontend/src:/app
-  #     - node_modules:/app/node_modules
-  #   environment:
-  #     - CHOKIDAR_USEPOLLING=1
-  #     - NUXT_HOST=0.0.0.0
-  #     - NUXT_PORT=3000
-  #   ports:
-  #     - '3000:3000'
-  #   networks:
-  #     - skillup-network
-
   nginx:
     image: nginx:alpine
     container_name: nginx_gateway

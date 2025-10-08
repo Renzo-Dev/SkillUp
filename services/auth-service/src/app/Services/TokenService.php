@@ -6,17 +6,23 @@ use App\Contracts\Services\TokenServiceInterface;
 use App\Models\User;
 use App\Services\JwtService;
 use App\Services\RefreshTokenService;
+use App\Contracts\Services\JwtMetadataCacheServiceInterface;
+use Illuminate\Support\Facades\Cache;
 
 class TokenService implements TokenServiceInterface
 {
   public function __construct(
     private JwtService $jwtService,
-    private RefreshTokenService $refreshTokenService
+    private RefreshTokenService $refreshTokenService,
+    private JwtMetadataCacheServiceInterface $jwtMetadataCache
   ) {}
 
   public function generateTokenPair(User $user): array {
+    $accessToken = $this->jwtService->generate($user);
+    $this->jwtMetadataCache->rememberFromToken($accessToken, $user);
+
     return [
-      'access_token' => $this->jwtService->generate($user),
+      'access_token' => $accessToken,
       'refresh_token' => $this->refreshTokenService->generate($user),
     ];
   }
@@ -64,7 +70,6 @@ class TokenService implements TokenServiceInterface
 
   public function revokeToken(string $token): bool {
     try {
-      // Отзываем JWT токен
       $this->jwtService->revoke($token);
       return true;
     } catch (\Exception $e) {

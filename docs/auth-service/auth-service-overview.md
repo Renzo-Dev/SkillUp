@@ -18,7 +18,7 @@
 - **EmailVerificationService/Controller** — выпуск токенов подтверждения email, публикация событий, проверка статуса.
 - **UserService/UserRepository** — CRUD над пользователями, проверка паролей, обновление `last_login_at`.
 - **BlackListService** — управление JWT blacklist (через Tymon JWT Auth).
-- **JwtMetadataCacheService** — кеширует claims (user-id, scopes, subscription-tier) в Redis для ускоренной валидации gateway. *(коммент: добавляю сервис кеша)*
+- **JwtMetadataCacheService** — кеширует claims (user-id, scopes, subscription-tier, email_verified) в Redis для ускоренной валидации gateway. *(коммент: добавляю сервис кеша)*
 - **CustomLoggerService** — унифицированные логи `controller/service`.
 - **RabbitMQService** — публикация доменных событий в очереди (`user.events`, `email.verification`).
 
@@ -44,7 +44,7 @@
 - `POST /api/auth/resend-verification` — повторный токен верификации.
 - `GET /api/auth/verification-status` — статус email.
 - `GET /api/health`, `GET /api/status` — сервисные проверки.
-- `GET /internal/jwt/validate` — внутренний эндпоинт для gateway (возвращает 204 + заголовки `X-User-Id`, `X-Scopes`, `X-Subscription-Tier`; при ошибке 401/403). *(коммент: описываю новый endpoint)*
+- `GET /internal/jwt/validate` — внутренний эндпоинт для gateway (возвращает 204 + заголовки `X-User-Id`, `X-Scopes`, `X-Subscription-Tier`, `X-Email-Verified`; при ошибке 401/403). *(коммент: описываю новый endpoint)*
 
 ## Конфигурация и переменные окружения
 - **База**: `DB_*` (PostgreSQL), миграции присутствуют.
@@ -56,7 +56,7 @@
 
 ## Точки интеграции
 - **RabbitMQ** — публикация событий доменного уровня.
-- **Redis** — кеш, очереди, JWT blacklist.
+- **Redis** — кеш, очереди, JWT blacklist, быстрый доступ к метаданным JWT.
 - **PostgreSQL** — персистентное хранение пользователей/токенов.
 - **Внешние сервисы** (через события) — Email-сервис, аналитика, уведомления.
 
