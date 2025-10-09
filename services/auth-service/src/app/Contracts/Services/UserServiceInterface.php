@@ -14,8 +14,10 @@ interface UserServiceInterface
     public function activateUser(User $user): ?User;
     public function deactivateUser(User $user): ?User;
     public function findUserByEmail(string $email): ?UserDTO;
+    public function findUserById(int $id): ?UserDTO;
     public function checkPassword(User $user, string $password): bool;
     public function isUserActive(User $user): bool;
     public function updateLastLogin(User $user): ?User;
     public function verifyEmail(User $user): ?User;
+    public function getModelById(int $id): ?User;
 }

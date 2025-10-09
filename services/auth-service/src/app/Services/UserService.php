@@ -111,6 +111,26 @@ class UserService implements UserServiceInterface
         }
     }
 
+    public function findUserById(int $id): ?UserDTO
+    {
+        try {
+            $user = $this->userRepository->findById($id);
+            return $user ? UserDTO::fromModel($user) : null;
+        } catch (\Exception $e) {
+            $this->logger->serviceError('Ошибка при поиске пользователя по ID: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function getModelById(int $id): ?User
+    {
+        try {
+            return $this->userRepository->findById($id);
+        } catch (\Exception $e) {
+            $this->logger->serviceError('Ошибка при получении модели пользователя: ' . $e->getMessage());
+            return null;
+        }
+    }
 
     /**
      * Проверка пароля пользователя

@@ -3,7 +3,6 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
-// Регистрируем интерфейсы и реализации сервисов
 use App\Contracts\Services\AuthServiceInterface;
 use App\Services\AuthService;
 use App\Contracts\Services\UserServiceInterface;
@@ -12,6 +11,8 @@ use App\Contracts\Services\BlackListServiceInterface;
 use App\Services\BlackListService;
 use App\Contracts\Services\JwtServiceInterface;
 use App\Services\JwtService;
+use App\Contracts\Services\JwtMetadataCacheServiceInterface;
+use App\Services\JwtMetadataCacheService;
 use App\Contracts\Services\CustomLoggerInterface;
 use App\Services\CustomLoggerService;
 use App\Contracts\Repositories\UserRepositoryInterface;
@@ -28,12 +29,8 @@ use App\Services\EmailVerificationService;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Регистрация сервисов приложения
-     */
     public function register(): void
     {
-        // Биндим AuthServiceInterface на AuthService
         $this->app->bind(AuthServiceInterface::class, AuthService::class);
         $this->app->bind(UserServiceInterface::class, UserService::class);
         $this->app->bind(JwtServiceInterface::class, JwtService::class);
@@ -45,11 +42,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(TokenInterface::class, JwtService::class);
         $this->app->bind(RabbitMQServiceInterface::class, RabbitMQService::class);
         $this->app->bind(EmailVerificationServiceInterface::class, EmailVerificationService::class);
+        $this->app->bind(JwtMetadataCacheServiceInterface::class, JwtMetadataCacheService::class);
     }
 
-    /**
-     * Загрузка сервисов приложения
-     */
     public function boot(): void
     {
         // Пока ничего не требуется
