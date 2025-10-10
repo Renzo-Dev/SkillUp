@@ -2,7 +2,7 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  
+
   // Автоматический перезапуск при изменениях
   vite: {
     server: {
@@ -11,7 +11,7 @@ export default defineNuxtConfig({
       },
     },
   },
-  
+
   // HMR настройки
   devServer: {
     port: 3000,
@@ -55,7 +55,10 @@ export default defineNuxtConfig({
     },
   },
 
-  css: ['~/assets/styles/main.scss'],
+  css: [
+    '~/assets/styles/main.scss',
+    'aos/dist/aos.css'
+  ],
 
   modules: [
     '@nuxt/eslint',
