@@ -169,8 +169,8 @@ useHead({
     right: 0;
     bottom: 0;
     background: 
-      radial-gradient(circle at 30% 20%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
-      radial-gradient(circle at 70% 80%, rgba(118, 75, 162, 0.1) 0%, transparent 50%);
+      radial-gradient(circle at 30% 20%, rgba(255, 193, 7, 0.08) 0%, transparent 50%),
+      radial-gradient(circle at 70% 80%, rgba(255, 152, 0, 0.06) 0%, transparent 50%);
     pointer-events: none;
   }
 }
@@ -186,9 +186,8 @@ useHead({
 .auth-card {
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 24px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(255, 193, 7, 0.1);
   padding: 3rem;
   position: relative;
   
@@ -198,15 +197,15 @@ useHead({
     top: 0;
     left: 0;
     right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.5), transparent);
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(255, 193, 7, 0.6), transparent);
   }
 }
 
 .auth-title {
   text-align: center;
   margin-bottom: 2.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #ffc107 0%, #ffeb3b 50%, #ff9800 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -241,20 +240,19 @@ useHead({
 
 .form-input {
   padding: 1rem 1.25rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   font-size: 1rem;
   background: rgba(255, 255, 255, 0.05);
   color: #fff;
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 
   &:focus {
     outline: none;
-    border-color: #667eea;
     background: rgba(255, 255, 255, 0.08);
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-    transform: translateY(-1px);
+    box-shadow: 0 8px 30px rgba(255, 193, 7, 0.2), 0 4px 12px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
   }
 
   &::placeholder {
@@ -275,18 +273,18 @@ useHead({
     margin: 0;
     width: 1.25rem;
     height: 1.25rem;
-    accent-color: #667eea;
+    accent-color: #ffc107;
     border-radius: 4px;
   }
 
   .link {
-    color: #667eea;
+    color: #ffc107;
     text-decoration: none;
     font-weight: 600;
     transition: all 0.3s ease;
 
     &:hover {
-      color: #764ba2;
+      color: #ffeb3b;
       text-decoration: underline;
     }
   }
@@ -304,13 +302,15 @@ useHead({
   overflow: hidden;
 
   &.btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+    background: linear-gradient(135deg, #ffc107 0%, #ffeb3b 100%);
+    color: #1a1a1a;
+    box-shadow: 0 4px 20px rgba(255, 193, 7, 0.4), 0 2px 8px rgba(255, 193, 7, 0.2);
+    font-weight: 700;
 
     &:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 30px rgba(255, 193, 7, 0.5), 0 4px 12px rgba(255, 193, 7, 0.3);
+      background: linear-gradient(135deg, #ffeb3b 0%, #ffc107 100%);
     }
 
     &:disabled {
@@ -331,13 +331,13 @@ useHead({
     margin: 0;
 
     a {
-      color: #667eea;
+      color: #ffc107;
       text-decoration: none;
       font-weight: 600;
       transition: all 0.3s ease;
 
       &:hover {
-        color: #764ba2;
+        color: #ffeb3b;
         text-decoration: underline;
       }
     }

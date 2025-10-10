@@ -13,7 +13,7 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%);
   color: #fff;
   position: relative;
 
@@ -27,12 +27,12 @@
     background:
       radial-gradient(
         circle at 20% 80%,
-        rgba(102, 126, 234, 0.1) 0%,
+        rgba(255, 193, 7, 0.08) 0%,
         transparent 50%
       ),
       radial-gradient(
         circle at 80% 20%,
-        rgba(118, 75, 162, 0.1) 0%,
+        rgba(255, 152, 0, 0.06) 0%,
         transparent 50%
       );
     pointer-events: none;
