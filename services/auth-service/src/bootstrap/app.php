@@ -16,6 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'guard.jwt' => \App\Http\Middleware\JwtAuthMiddleware::class,
         ]);
+        
+        // Отключаем CORS middleware Laravel, так как используем nginx
+        $middleware->remove(\Fruitcake\Cors\HandleCors::class);
     })
     ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule): void {
         // Очистка истекших refresh токенов каждые 6 часов в 0 минут
