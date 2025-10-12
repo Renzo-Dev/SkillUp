@@ -55,10 +55,7 @@ export default defineNuxtConfig({
     },
   },
 
-  css: [
-    '~/assets/styles/main.scss',
-    'aos/dist/aos.css'
-  ],
+  css: ['~/assets/styles/main.scss', 'aos/dist/aos.css'],
 
   modules: [
     '@nuxt/eslint',
@@ -80,6 +77,7 @@ export default defineNuxtConfig({
       'images.unsplash.com',
       'cdn.midjourney.com',
       'res.cloudinary.com',
+      'cdn.jsdelivr.net',
     ],
   },
 })
