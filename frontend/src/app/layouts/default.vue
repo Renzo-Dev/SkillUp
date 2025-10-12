@@ -1,31 +1,27 @@
 <template>
   <div class="layout">
-    <Header data-aos="fade-down" />
-    <main class="main">
+    <Header />
+    <main class="main-content">
       <slot />
     </main>
-    <Footer data-aos="fade-up" />
+    <Footer />
   </div>
 </template>
 
-<script setup>
-// Шрифты подключаются через @nuxt/fonts в nuxt.config (Inter/Space Grotesk)
+<script setup lang="ts">
 </script>
 
-<style scoped lang="scss">
-@import '~/assets/styles/main.scss';
-
+<style scoped>
 .layout {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  color: var(--color-text);
 }
 
-.main {
+.main-content {
   flex: 1;
-  padding: 0;
-  position: relative;
+  padding: 2rem;
 }
+
+/* Additional layout styles will be added here */
 </style>
