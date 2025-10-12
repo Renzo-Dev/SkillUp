@@ -30,7 +30,7 @@ interface _ApiErrorResponse {
   errors?: Record<string, string[]>
 }
 
-// API url
+// API url - временно используем полный URL для отладки
 const API_BASE = 'http://localhost/api/auth'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -48,6 +48,7 @@ export const useAuthStore = defineStore('auth', () => {
   // api запрос через $fetch
   const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
     const url = `${API_BASE}${endpoint}`
+    console.log('API Request URL:', url) // Логируем URL для отладки
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>)
