@@ -6,15 +6,14 @@ use App\Contracts\Services\JwtMetadataCacheServiceInterface;
 use App\Contracts\Services\JwtServiceInterface;
 use App\Contracts\Services\UserServiceInterface;
 use App\Http\Resources\ApiErrorResource;
+use App\Exceptions\JWT\TokenExpiredException;
+use App\Exceptions\JWT\TokenInvalidException;
+use App\Exceptions\JWT\TokenBlacklistedException;
+use App\Exceptions\JWT\JwtException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Symfony\Component\HttpFoundation\Response;
-use Tymon\JWTAuth\Exceptions\JWTException;
-use Tymon\JWTAuth\Exceptions\TokenExpiredException;
-use Tymon\JWTAuth\Exceptions\TokenInvalidException;
-use Tymon\JWTAuth\Exceptions\TokenBlacklistedException;
-use Tymon\JWTAuth\Facades\JWTAuth;
 
 class JwtValidationController extends Controller
 {
@@ -68,8 +67,10 @@ class JwtValidationController extends Controller
             return $this->unauthorized('JWT токен недействителен', 'TOKEN_INVALID');
         } catch (TokenBlacklistedException $exception) {
             return $this->unauthorized('JWT токен отозван', 'TOKEN_BLACKLISTED');
-        } catch (JWTException $exception) {
+        } catch (JwtException $exception) {
             return $this->unauthorized('Ошибка проверки JWT токена', 'JWT_ERROR');
+        } catch (\Exception $exception) {
+            return $this->unauthorized('Ошибка аутентификации', 'AUTH_ERROR');
         }
     }
 
@@ -90,12 +91,16 @@ class JwtValidationController extends Controller
 
     private function unauthorized(string $message, string $code): JsonResponse
     {
-        return ApiErrorResource::create($message, 401, ['error_code' => $code])->response();
+        return ApiErrorResource::create($message, 401, ['error_code' => $code])
+            ->response()
+            ->setStatusCode(401);
     }
 
     private function forbidden(string $message, string $code): JsonResponse
     {
-        return ApiErrorResource::create($message, 403, ['error_code' => $code])->response();
+        return ApiErrorResource::create($message, 403, ['error_code' => $code])
+            ->response()
+            ->setStatusCode(403);
     }
 }
 

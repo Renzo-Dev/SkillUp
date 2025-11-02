@@ -21,9 +21,8 @@ class RefreshTokenService implements RefreshTokenServiceInterface, TokenInterfac
       // Генерируем уникальный refresh token
       $refreshToken = Str::random(64);
       
-      // Время истечения (по умолчанию 7 дней)
-      // Получаем срок жизни refresh token из .env (по умолчанию 7 дней)
-      $refreshTtl = (int) env('JWT_REFRESH_TTL', 7);
+      // Время истечения из конфига (по умолчанию 20160 минут = 14 дней)
+      $refreshTtl = (int) config('jwt.refresh_ttl', 20160);
       $expiresAt = now()->addMinutes($refreshTtl);
 
       $tokenData = [

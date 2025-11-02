@@ -8,7 +8,7 @@ FRONTEND_DIR := frontend
 HOST_UID := $(shell id -u)
 HOST_GID := $(shell id -g)
 
-.PHONY: init start stop clean check-frontend
+.PHONY: init start stop clean check-frontend jwt-keys
 
 init:
 	@echo ">>> Building Docker images"
@@ -43,7 +43,7 @@ init:
 	done
 	@echo ">>> Running artisan setup"
 	@for service in $(LARAVEL_SERVICES); do \
-		$(COMPOSE) exec $$service bash -lc "cd /var/www/html && php artisan key:generate --force && php artisan jwt:secret --force && php artisan migrate --force"; \
+		$(COMPOSE) exec $$service bash -lc "cd /var/www/html && php artisan key:generate --force && php artisan jwt:generate-keys --force && php artisan migrate --force"; \
 	done
 	@echo ">>> Frontend container will auto-run npm install && npm run dev"
 	@echo ">>> Fixing file ownership"
@@ -72,3 +72,11 @@ check-frontend:
 	else \
 		echo "No package.json found in frontend/src"; \
 	fi
+
+jwt-keys:
+	@echo ">>> Generating JWT RSA keys"
+	@for service in $(LARAVEL_SERVICES); do \
+		echo "Generating keys for $$service"; \
+		$(COMPOSE) exec $$service bash -lc "cd /var/www/html && php artisan jwt:generate-keys --force"; \
+	done
+	@echo ">>> JWT keys generated successfully"

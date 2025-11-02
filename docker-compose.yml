@@ -9,6 +9,7 @@ services:
     volumes:
       - ./services/auth-service/src:/var/www/html
       - ./services/auth-service/supervisord.conf:/etc/supervisor/conf.d/supervisord.conf
+      # RSA ключи хранятся внутри контейнера (src/storage/jwt/)
     environment:
       - DB_CONNECTION=pgsql
       - DB_HOST=postgres
@@ -23,6 +24,13 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=
+      # JWT Configuration
+      - JWT_ALGO=RS256
+      - JWT_PUBLIC_KEY=file:///var/www/html/storage/jwt/public.pem
+      - JWT_PRIVATE_KEY=file:///var/www/html/storage/jwt/private.pem
+      - JWT_TTL=60
+      - JWT_REFRESH_TTL=10080
+      - JWT_BLACKLIST_ENABLED=true
     ports:
       - '9000:9000'
     networks:
@@ -42,6 +50,7 @@ services:
     volumes:
       - ./services/ai-service/src:/var/www/html
       - ./services/ai-service/supervisord.conf:/etc/supervisor/conf.d/supervisord.conf
+      # Публичный ключ получается через HTTP: /api/auth/internal/jwt/public-key
     environment:
       - DB_CONNECTION=pgsql
       - DB_HOST=postgres
@@ -56,7 +65,11 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=
+      # Auth service URL для внутренних запросов
       - APP_SERVICE_AUTH_URL=http://auth-service
+      # JWT Configuration (только публичный ключ для валидации)
+      - JWT_ALGO=RS256
+      - JWT_PUBLIC_KEY=file:///var/www/html/storage/jwt/public.pem
     expose:
       - '9001'
     networks:

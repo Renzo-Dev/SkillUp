@@ -3,19 +3,19 @@
 namespace App\Services;
 
 use App\Contracts\Services\JwtMetadataCacheServiceInterface;
+use App\Support\JWT\JwtManager;
 use App\Models\User;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Tymon\JWTAuth\Facades\JWTAuth;
-use Tymon\JWTAuth\Token;
 
 class JwtMetadataCacheService implements JwtMetadataCacheServiceInterface
 {
     private CacheRepository $cache;
 
-    public function __construct()
-    {
+    public function __construct(
+        private JwtManager $jwtManager
+    ) {
         $store = config('jwt.cache_store', env('JWT_CACHE_STORE', 'redis'));
         $this->cache = Cache::store($store);
     }
@@ -46,9 +46,10 @@ class JwtMetadataCacheService implements JwtMetadataCacheServiceInterface
 
     public function rememberFromToken(string $token, User $user, array $context = []): array
     {
-        $parsed = JWTAuth::manager()->decode(new Token($token));
+        // Декодируем токен через JwtManager
+        $parsed = $this->jwtManager->decode($token);
 
-        return $this->remember($user, $parsed->toArray(), $context);
+        return $this->remember($user, $parsed, $context);
     }
 
     public function get(string $jti): ?array
@@ -64,8 +65,9 @@ class JwtMetadataCacheService implements JwtMetadataCacheServiceInterface
     public function forgetByToken(string $token): void
     {
         try {
-            $payload = JWTAuth::manager()->decode(new Token($token));
-            $jti = (string) $payload->get('jti');
+            // Декодируем токен через JwtManager
+            $payload = $this->jwtManager->decode($token);
+            $jti = (string) ($payload['jti'] ?? '');
 
             if ($jti !== '') {
                 $this->forget($jti);

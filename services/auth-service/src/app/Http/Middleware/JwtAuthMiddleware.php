@@ -5,16 +5,23 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Tymon\JWTAuth\Facades\JWTAuth;
-use Tymon\JWTAuth\Exceptions\JWTException;
-use Tymon\JWTAuth\Exceptions\TokenExpiredException;
-use Tymon\JWTAuth\Exceptions\TokenInvalidException;
-use Tymon\JWTAuth\Exceptions\TokenBlacklistedException;
+use App\Support\JWT\JwtManager;
+use App\Contracts\Repositories\UserRepositoryInterface;
+use App\Contracts\Services\BlackListServiceInterface;
+use App\Exceptions\JWT\TokenExpiredException;
+use App\Exceptions\JWT\TokenInvalidException;
+use App\Exceptions\JWT\TokenBlacklistedException;
 use Illuminate\Support\Facades\Log;
-use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 
 class JwtAuthMiddleware
 {
+    public function __construct(
+        private JwtManager $jwtManager,
+        private UserRepositoryInterface $userRepository,
+        private BlackListServiceInterface $blacklist,
+    ) {}
+    
     public function handle(Request $request, Closure $next): Response
     {
         try {
@@ -24,7 +31,22 @@ class JwtAuthMiddleware
                 return $this->unauthorizedResponse('Токен не предоставлен', 'TOKEN_MISSING');
             }
 
-            $user = JWTAuth::parseToken()->authenticate();
+            // Проверка blacklist (до валидации токена)
+            if ($this->blacklist->checkTokenInBlackList($token)) {
+                Log::warning('JWT токен в blacklist');
+                return $this->unauthorizedResponse('Токен отозван', 'TOKEN_BLACKLISTED');
+            }
+
+            // Валидация и декодирование токена
+            $payload = $this->jwtManager->decode($token);
+            $userId = (int) ($payload['sub'] ?? 0);
+            
+            if ($userId <= 0) {
+                return $this->unauthorizedResponse('Недействительный идентификатор пользователя', 'USER_ID_INVALID');
+            }
+
+            // Получение пользователя из репозитория
+            $user = $this->userRepository->findById($userId);
             
             if (!$user) {
                 return $this->unauthorizedResponse('Пользователь не найден', 'USER_NOT_FOUND');
@@ -34,9 +56,13 @@ class JwtAuthMiddleware
                 return $this->unauthorizedResponse('Пользователь деактивирован', 'USER_INACTIVE');
             }
 
+            // Устанавливаем пользователя в request и в Laravel auth
             $request->setUserResolver(function () use ($user) {
                 return $user;
             });
+            
+            // Устанавливаем пользователя в Auth фасад для доступа через auth()->user()
+            Auth::setUser($user);
 
             Log::info('JWT аутентификация успешна', [
                 'user_id' => $user->id,
@@ -55,12 +81,8 @@ class JwtAuthMiddleware
             return $this->unauthorizedResponse('Токен недействителен', 'TOKEN_INVALID');
             
         } catch (TokenBlacklistedException $e) {
-            Log::warning('JWT токен в blacklist', ['error' => $e->getMessage()]);
+            Log::warning('JWT токен отозван', ['error' => $e->getMessage()]);
             return $this->unauthorizedResponse('Токен отозван', 'TOKEN_BLACKLISTED');
-            
-        } catch (JWTException $e) {
-            Log::error('JWT ошибка', ['error' => $e->getMessage()]);
-            return $this->unauthorizedResponse('Ошибка аутентификации', 'JWT_ERROR');
             
         } catch (\Exception $e) {
             Log::error('Неожиданная ошибка в JWT middleware', [

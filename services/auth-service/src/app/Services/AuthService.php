@@ -111,8 +111,22 @@ class AuthService implements AuthServiceInterface
     public function logout(string $token): bool
     {
         try {
+            // Получаем текущего пользователя перед отзывом токена
+            $user = auth()->user();
+            
             // Отзываем токен через tokenService
-            return $this->tokenService->revokeToken($token);
+            $revoked = $this->tokenService->revokeToken($token);
+            
+            if ($revoked && $user) {
+                // Отправляем событие выхода пользователя
+                $this->eventPublisher->publishUserLoggedOut([
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'logged_out_at' => now()->toISOString()
+                ]);
+            }
+            
+            return $revoked;
         } catch (\Exception $e) {
             $this->logger->serviceError('Ошибка при выходе пользователя: ' . $e->getMessage());
             return false;
@@ -136,14 +150,14 @@ class AuthService implements AuthServiceInterface
     public function refreshToken(string $token): ?AuthResponseDTO
     {
         try {
-            // Обновляем токен через tokenService
+            // Обновляем токен через tokenService (возвращает токены + user)
             $tokenPair = $this->tokenService->refreshToken($token);
             if (!$tokenPair) {
                 return null;
             }
             
-            // Получаем пользователя из токена
-            $user = auth()->user();
+            // Получаем пользователя из результата refreshToken
+            $user = $tokenPair['user'] ?? null;
             if (!$user) {
                 return null;
             }

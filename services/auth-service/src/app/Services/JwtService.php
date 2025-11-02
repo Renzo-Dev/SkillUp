@@ -3,18 +3,28 @@
 namespace App\Services;
 
 use App\Contracts\Services\JwtServiceInterface;
-use Tymon\JWTAuth\Facades\JWTAuth;
+use App\Support\JWT\JwtManager;
+use App\Support\JWT\JwtPayloadFactory;
+use App\Contracts\Services\BlackListServiceInterface;
 use Illuminate\Support\Facades\Log;
 use App\Models\User;
 
 class JwtService implements JwtServiceInterface
 {
+  public function __construct(
+    private JwtManager $jwtManager,
+    private JwtPayloadFactory $payloadFactory,
+    private BlackListServiceInterface $blackListService,
+  ) {}
+
   public function generate(User $user): string
   {
     try {
-       // Не добавляем кастомные claims — оставляем стандартные (sub, iat, exp, jti)
-       // Время жизни контролируется конфигом jwt.ttl
-      return JWTAuth::fromUser($user);
+       // Создаём payload через фабрику
+       $payload = $this->payloadFactory->make($user);
+       
+       // Генерируем токен через JwtManager
+       return $this->jwtManager->encode($payload);
     } catch (\Exception $e) {
       Log::error('Failed to generate token: ' . $e->getMessage());
       throw new \Exception('Failed to generate token: ' . $e->getMessage());
@@ -23,7 +33,8 @@ class JwtService implements JwtServiceInterface
 
   public function validate(string $token): array {
     try {
-      return JWTAuth::parseToken()->getPayload()->toArray();
+      // Декодируем токен через JwtManager
+      return $this->jwtManager->decode($token);
     } catch (\Exception $e) {
       Log::error('Failed to validate token: ' . $e->getMessage());
       throw new \Exception('Failed to validate token: ' . $e->getMessage());
@@ -31,9 +42,9 @@ class JwtService implements JwtServiceInterface
   }
 
   public function revoke(string $token): void {
-    // Добавляем токен в blacklist через JWTAuth (отзыв токена)
+    // Добавляем токен в blacklist через BlackListService
     try {
-      JWTAuth::setToken($token)->invalidate();
+      $this->blackListService->addTokenToBlackList($token);
     } catch (\Exception $e) {
       Log::error('Не удалось отозвать токен: ' . $e->getMessage());
       throw new \Exception('Не удалось отозвать токен: ' . $e->getMessage());
@@ -44,8 +55,8 @@ class JwtService implements JwtServiceInterface
   public function isValid(string $token): bool
   {
     try {
-      JWTAuth::parseToken()->getPayload();
-      return true;
+      // Валидируем токен через JwtManager
+      return $this->jwtManager->validate($token);
     } catch (\Exception $e) {
       Log::error('JWT token is invalid: ' . $e->getMessage());
       return false;
@@ -56,7 +67,8 @@ class JwtService implements JwtServiceInterface
   public function decode(string $token): ?array
   {
     try {
-      return JWTAuth::parseToken()->getPayload()->toArray();
+      // Декодируем токен через JwtManager
+      return $this->jwtManager->decode($token);
     } catch (\Exception $e) {
       Log::error('Failed to decode JWT token: ' . $e->getMessage());
       return null;
@@ -66,8 +78,8 @@ class JwtService implements JwtServiceInterface
   public function getExpirationTime(string $token): ?int
   {
     try {
-      $payload = JWTAuth::parseToken()->getPayload();
-      return $payload->get('exp');
+      // Получаем exp через JwtManager
+      return $this->jwtManager->getExpirationTime($token);
     } catch (\Exception $e) {
       Log::error('Failed to get JWT expiration time: ' . $e->getMessage());
       return null;
@@ -77,14 +89,47 @@ class JwtService implements JwtServiceInterface
   public function isExpired(string $token): bool
   {
     try {
-      $exp = $this->getExpirationTime($token);
-      if ($exp === null) {
-        return true;
-      }
-      return $exp < time();
+      // Проверяем истечение через JwtManager
+      return $this->jwtManager->isExpired($token);
     } catch (\Exception $e) {
       Log::error('Failed to check JWT expiration: ' . $e->getMessage());
       return true;
     }
+  }
+
+  /**
+   * Получить публичный RSA ключ для валидации JWT в других сервисах
+   * 
+   * @return string Содержимое PEM файла
+   * @throws \Exception Если ключ не найден или не читается
+   */
+  public function getPublicKey(): string
+  {
+    try {
+      // Получаем публичный ключ из JwtManager
+      return $this->jwtManager->getPublicKey();
+    } catch (\Exception $e) {
+      Log::error('Failed to get public key', ['error' => $e->getMessage()]);
+      throw new \Exception('Не удалось получить публичный ключ: ' . $e->getMessage());
+    }
+  }
+
+  /**
+   * Получить путь к публичному ключу
+   * 
+   * @return string
+   */
+  public function getPublicKeyPath(): string
+  {
+    $publicKeyPath = config('jwt.keys.public');
+    return str_replace('file://', '', $publicKeyPath);
+  }
+
+  /**
+   * Получить алгоритм подписи токена
+   */
+  public function getAlgorithm(): string
+  {
+    return $this->jwtManager->getAlgorithm();
   }
 }

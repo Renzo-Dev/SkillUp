@@ -8,6 +8,7 @@ use App\Services\JwtService;
 use App\Services\RefreshTokenService;
 use App\Contracts\Services\JwtMetadataCacheServiceInterface;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class TokenService implements TokenServiceInterface
 {
@@ -32,21 +33,32 @@ class TokenService implements TokenServiceInterface
       // Находим валидный refresh token
       $tokenData = $this->refreshTokenService->findValid($refreshToken);
       if (!$tokenData) {
+        Log::warning('Refresh token not found or invalid', ['token' => substr($refreshToken, 0, 20)]);
         return null;
       }
 
       // Получаем пользователя
       $user = User::find($tokenData->user_id);
       if (!$user) {
+        Log::warning('User not found for refresh token', ['user_id' => $tokenData->user_id]);
         return null;
       }
 
       // Отзываем старый refresh token
       $this->refreshTokenService->revoke($refreshToken);
 
-      // Генерируем новую пару токенов
-      return $this->generateTokenPair($user);
+      // Генерируем новую пару токенов и возвращаем с объектом пользователя
+      $tokens = $this->generateTokenPair($user);
+      return [
+        'access_token' => $tokens['access_token'],
+        'refresh_token' => $tokens['refresh_token'],
+        'user' => $user
+      ];
     } catch (\Exception $e) {
+      Log::error('Failed to refresh token pair: ' . $e->getMessage(), [
+        'exception' => get_class($e),
+        'trace' => $e->getTraceAsString()
+      ]);
       return null;
     }
   }
